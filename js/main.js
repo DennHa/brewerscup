@@ -17,6 +17,8 @@ import {
 // State management
 let currentInputType = 'text';
 let currentDeck = null;
+let currentMainboard = null;
+let currentSideboard = null;
 let currentValidation = null;
 
 /**
@@ -109,7 +111,7 @@ window.previewDeck = async function() {
     hideError();
     console.log('🎯 Starting deck preview...');
 
-    const { deck, errors } = await getDeckInput();
+    const { deck, mainboard, sideboard, errors } = await getDeckInput();
     if (!deck) {
       console.log('❌ No deck input provided');
       hideProgressOverlay();
@@ -117,20 +119,30 @@ window.previewDeck = async function() {
       return;
     }
     
-    console.log(`📊 Parsed ${deck.length} unique cards from input`);
+    console.log(`📊 Parsed ${mainboard.length} mainboard, ${sideboard.length} sideboard cards`);
 
     // Show progress overlay
     showProgressOverlay(deck.length);
 
     // Normalize card names with progress tracking
     console.log('🔍 Normalizing card names with Scryfall...');
-    const normalizedDeck = await normalizeDeckNames(deck, (current, total, cardName) => {
+    const normalizedMainboard = await normalizeDeckNames(mainboard, (current, total, cardName) => {
       updateProgressBar(current, total, cardName);
     });
     
+    // Also normalize sideboard cards
+    const normalizedSideboard = sideboard.length > 0 
+      ? await normalizeDeckNames(sideboard, (current, total, cardName) => {
+          updateProgressBar(mainboard.length + current, mainboard.length + sideboard.length, cardName);
+        })
+      : [];
+    
     hideProgressOverlay();
-    console.log('✅ Card normalization complete', normalizedDeck);
+    console.log('✅ Card normalization complete');
 
+    // Combine for validation (validate mainboard)
+    const normalizedDeck = normalizedMainboard;
+    
     // Check for unfound cards
     const unfoundCards = normalizedDeck.filter(card => card.error);
     if (unfoundCards.length > 0) {
@@ -175,10 +187,12 @@ window.previewDeck = async function() {
 
     // Store for later use
     currentDeck = normalizedDeck;
+    currentMainboard = normalizedMainboard;
+    currentSideboard = normalizedSideboard;
     currentValidation = combinedValidation;
 
     // Display preview
-    displayPreview(normalizedDeck, combinedValidation, deckSize);
+    displayPreview(normalizedDeck, combinedValidation, deckSize, normalizedSideboard.length);
     showLoading(false);
     
   } catch (error) {
@@ -237,7 +251,21 @@ window.submitDeck = async function() {
         quantity: card.quantity,
         scryfallId: card.scryfallId
       })),
-      deckSize: calculateDeckSize(currentDeck),
+      mainboard: currentMainboard.map(card => ({
+        name: card.normalizedName || card.originalName,
+        originalName: card.originalName,
+        quantity: card.quantity,
+        scryfallId: card.scryfallId
+      })),
+      sideboard: currentSideboard.map(card => ({
+        name: card.normalizedName || card.originalName,
+        originalName: card.originalName,
+        quantity: card.quantity,
+        scryfallId: card.scryfallId
+      })),
+      mainboardSize: calculateDeckSize(currentMainboard),
+      sideboardSize: calculateDeckSize(currentSideboard),
+      deckSize: calculateDeckSize(currentDeck) + calculateDeckSize(currentSideboard),
       verificationCode,
       isValid: currentValidation.overallValid,
       bannedCards: currentValidation.bannedCards,
@@ -286,26 +314,37 @@ async function getDeckInput() {
     return { deck: null };
   }
 
-  const deck = parseDecklistText(deckText);
-  if (deck.length === 0) {
+  const { mainboard, sideboard } = parseDecklistText(deckText);
+  
+  // For Pauper, we typically only validate mainboard, but include sideboard in submission
+  const allCards = [...mainboard];
+  
+  if (allCards.length === 0) {
     showError('Could not parse any cards from the deck list');
     return { deck: null };
   }
-  return { deck };
+  
+  return { deck: allCards, mainboard, sideboard };
 }
 
 /**
  * Display the deck preview
  */
-function displayPreview(deck, validation, deckSize) {
+function displayPreview(deck, validation, deckSize, sideboardCount = 0) {
   const previewSection = document.getElementById('preview-section');
   
   // Show stats
   const statsHtml = `
     <div class="stat-item">
-      <span class="stat-label">Total Cards:</span>
-      <span class="stat-value">${deckSize}</span>
+      <span class="stat-label">Mainboard:</span>
+      <span class="stat-value">${deckSize} cards</span>
     </div>
+    ${sideboardCount > 0 ? `
+    <div class="stat-item">
+      <span class="stat-label">Sideboard:</span>
+      <span class="stat-value">${sideboardCount} cards</span>
+    </div>
+    ` : ''}
     <div class="stat-item">
       <span class="stat-label">Unique Cards:</span>
       <span class="stat-value">${deck.length}</span>

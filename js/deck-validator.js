@@ -202,31 +202,39 @@ export const BAN_LIST = [
 /**
  * Parse deck from text format
  * Supports formats like: "4x Card Name" or "4 Card Name"
+ * Separates mainboard and sideboard with "Sideboard" marker
  * @param {string} deckText - Raw deck list text
- * @returns {Array} Array of {quantity, name}
+ * @returns {Object} {mainboard: Array, sideboard: Array}
  */
 export function parseDecklistText(deckText) {
   console.log('🔍 Parsing deck text...');
-  const lines = deckText.split('\n').filter(line => line.trim());
-  const deck = [];
+  const lines = deckText.split('\n').map(line => line.trim()).filter(line => line);
+  const mainboard = [];
+  const sideboard = [];
+  let currentSection = mainboard; // Start with mainboard
 
   for (const line of lines) {
-    const trimmed = line.trim();
+    // Check if this line is the sideboard marker
+    if (line.toUpperCase() === 'SIDEBOARD') {
+      currentSection = sideboard;
+      console.log('📝 Switching to sideboard section');
+      continue;
+    }
     
     // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith('//')) continue;
+    if (!line || line.startsWith('//')) continue;
 
     // Match patterns like "4x Card Name" or "4 Card Name"
-    const match = trimmed.match(/^(\d+)x?\s+(.+)$/) || trimmed.match(/^(\d+)\s+(.+)$/);
+    const match = line.match(/^(\d+)x?\s+(.+)$/) || line.match(/^(\d+)\s+(.+)$/);
     
     if (match) {
       const quantity = parseInt(match[1], 10);
       const cardName = match[2].trim();
       
       // Skip category labels
-      const labels = ['LANDS', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ARTIFACTS', 'ENCHANTMENTS', 'PLANESWALKERS', 'SIDEBOARD'];
+      const labels = ['LANDS', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ARTIFACTS', 'ENCHANTMENTS', 'PLANESWALKERS'];
       if (!labels.includes(cardName.toUpperCase())) {
-        deck.push({
+        currentSection.push({
           quantity,
           name: cardName
         });
@@ -234,7 +242,8 @@ export function parseDecklistText(deckText) {
     }
   }
 
-  return deck;
+  console.log(`✅ Parsed: ${mainboard.length} mainboard cards, ${sideboard.length} sideboard cards`);
+  return { mainboard, sideboard };
 }
 
 /**
