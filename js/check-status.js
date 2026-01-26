@@ -193,7 +193,16 @@ window.revalidateDeck = async function() {
     const decklist = [];
 
     for (const line of lines) {
-      const match = line.match(/^(\d+)x?\s+(.+)$/i);
+      const trimmedLine = line.trim();
+      
+      // Skip section markers and empty lines
+      if (trimmedLine.toUpperCase() === 'SIDEBOARD' || 
+          !trimmedLine || 
+          trimmedLine.startsWith('//')) {
+        continue;
+      }
+      
+      const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
       if (!match) {
         editError.textContent = `Invalid format on line: "${line}". Use format: "2x Island"`;
         editError.classList.remove('hidden');
@@ -333,7 +342,14 @@ window.saveUpdatedDeck = async function() {
     const decklist = [];
 
     for (const line of lines) {
-      const match = line.match(/^(\d+)x?\s+(.+)$/i);
+      const trimmedLine = line.trim();
+      
+      // Skip section markers
+      if (trimmedLine.toUpperCase() === 'SIDEBOARD' || trimmedLine.startsWith('//')) {
+        continue;
+      }
+      
+      const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
       if (!match) continue;
 
       const quantity = parseInt(match[1]);
