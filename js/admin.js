@@ -114,11 +114,34 @@ function setupTabs() {
   const playersTab = document.getElementById('players-tab');
   const banlistTab = document.getElementById('banlist-tab');
   
+  console.log('Setup tabs - players btn:', playersTabBtn);
+  console.log('Setup tabs - banlist btn:', banlistTabBtn);
+  console.log('Setup tabs - players tab:', playersTab);
+  console.log('Setup tabs - banlist tab:', banlistTab);
+  
+  // Ensure players tab starts as active
+  if (playersTabBtn) playersTabBtn.classList.add('active');
+  if (banlistTabBtn) banlistTabBtn.classList.remove('active');
+  if (playersTab) {
+    playersTab.classList.remove('hidden');
+    playersTab.classList.add('active');
+  }
+  if (banlistTab) {
+    banlistTab.classList.add('hidden');
+    banlistTab.classList.remove('active');
+  }
+  
   if (playersTabBtn) {
     playersTabBtn.addEventListener('click', () => {
       console.log('Players tab clicked');
-      if (playersTab) playersTab.classList.remove('hidden');
-      if (banlistTab) banlistTab.classList.add('hidden');
+      if (playersTab) {
+        playersTab.classList.remove('hidden');
+        playersTab.classList.add('active');
+      }
+      if (banlistTab) {
+        banlistTab.classList.add('hidden');
+        banlistTab.classList.remove('active');
+      }
       playersTabBtn.classList.add('active');
       if (banlistTabBtn) banlistTabBtn.classList.remove('active');
     });
@@ -127,20 +150,18 @@ function setupTabs() {
   if (banlistTabBtn) {
     banlistTabBtn.addEventListener('click', () => {
       console.log('Ban list tab clicked');
-      console.log('banlistTab element:', banlistTab);
       if (playersTab) {
-        console.log('Hiding players tab');
         playersTab.classList.add('hidden');
+        playersTab.classList.remove('active');
       }
       if (banlistTab) {
-        console.log('Showing ban list tab, current classes:', banlistTab.className);
         banlistTab.classList.remove('hidden');
-        console.log('After removing hidden, classes:', banlistTab.className);
+        banlistTab.classList.add('active');
       }
       if (playersTabBtn) playersTabBtn.classList.remove('active');
       banlistTabBtn.classList.add('active');
-      console.log('About to call loadBanList');
-      loadBanList(); // Load ban list when tab is opened
+      
+      loadBanList();
     });
   }
 }
