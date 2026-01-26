@@ -1,0 +1,19 @@
+/**
+ * Admin Dashboard Logic
+ * 
+ * Simple email-based admin dashboard for viewing player submissions
+ * 
+ * ⚠️ SECURITY WARNING: This file contains hardcoded credentials for development only.
+ * For production, use proper authentication (Firebase Auth, OAuth, etc.)
+ */
+
+import { db } from './firebase-config.js';
+import { collection, query, orderBy, getDocs, deleteDoc, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import { updateBanList, getBanList, clearBanListCache } from './deck-validator.js';
+
+// ⚠️ TODO: Replace with your actual admin credentials
+// These should be stored securely in environment variables or Firebase Auth
+const ADMIN_EMAIL = 'admin@example.com';
+const ADMIN_PASSWORD = 'your-secure-password-here';
+
+// ... rest of the file remains the same
