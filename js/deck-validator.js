@@ -4,7 +4,7 @@
  * Handles deck parsing, normalization, and validation against ban list
  */
 
-import { getCardFromScryfall } from './scryfall-api.js';
+import { getCardFromScryfall, isPauperLegal } from './scryfall-api.js';
 import { db } from './firebase-config.js';
 import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 
@@ -464,4 +464,54 @@ export function validateAgainstBanlist(deck, banlist = BAN_LIST) {
  */
 export function calculateDeckSize(deck) {
   return deck.reduce((total, card) => total + card.quantity, 0);
+}
+
+/**
+ * Check deck for Pauper legality via Scryfall
+ * @param {Array} deck - Deck array with card objects
+ * @returns {Promise<Object>} Legality check result with illegal cards
+ */
+export async function validatePauperLegality(deck) {
+  const illegalCards = [];
+  const checkedCards = new Map(); // Cache results to avoid duplicate API calls
+  
+  for (const card of deck) {
+    const cardName = card.normalizedName || card.originalName;
+    
+    // Skip if we've already checked this card name
+    if (checkedCards.has(cardName)) {
+      const legalityResult = checkedCards.get(cardName);
+      if (!legalityResult.isLegal) {
+        illegalCards.push({
+          name: cardName,
+          quantity: card.quantity,
+          originalName: card.originalName,
+          status: legalityResult.status
+        });
+      }
+      continue;
+    }
+    
+    try {
+      const legalityResult = await isPauperLegal(cardName);
+      checkedCards.set(cardName, legalityResult);
+      
+      if (legalityResult.success && !legalityResult.isLegal) {
+        illegalCards.push({
+          name: cardName,
+          quantity: card.quantity,
+          originalName: card.originalName,
+          status: legalityResult.status
+        });
+      }
+    } catch (error) {
+      console.error(`Error checking Pauper legality for "${cardName}":`, error);
+    }
+  }
+  
+  return {
+    valid: illegalCards.length === 0,
+    illegalCards,
+    totalIllegalQuantity: illegalCards.reduce((sum, card) => sum + card.quantity, 0)
+  };
 }

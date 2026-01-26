@@ -31,6 +31,10 @@ export async function getCardFromScryfall(cardName) {
     const data = await response.json();
     console.log(`✅ Scryfall match: "${cardName}" → "${data.name}"`);
     
+    // Extract Pauper legality
+    const pauperLegal = data.legalities?.pauper === 'legal';
+    const pauperStatus = data.legalities?.pauper || 'unknown';
+    
     return {
       success: true,
       name: data.name,
@@ -39,7 +43,9 @@ export async function getCardFromScryfall(cardName) {
       colors: data.colors || [],
       manaCost: data.mana_cost || '',
       scryfallId: data.id,
-      originalQuery: cardName
+      originalQuery: cardName,
+      pauperLegal,
+      pauperStatus
     };
   } catch (error) {
     console.error(`❌ Scryfall error for "${cardName}":`, error.message);
@@ -84,5 +90,49 @@ export async function testScryfallAPI() {
   } catch (error) {
     console.error('Scryfall API test failed:', error);
     return false;
+  }
+}
+
+/**
+ * Check if a card is legal in Pauper format via Scryfall
+ * @param {string} cardName - The card name to check
+ * @returns {Promise<Object>} Object with legality status and card info
+ */
+export async function isPauperLegal(cardName) {
+  try {
+    const normalizedInput = cardName.trim();
+    const response = await fetch(
+      `${SCRYFALL_API}/cards/named?fuzzy=${encodeURIComponent(normalizedInput)}`
+    );
+
+    if (!response.ok) {
+      return {
+        success: false,
+        originalQuery: cardName,
+        error: 'Card not found on Scryfall'
+      };
+    }
+
+    const data = await response.json();
+    const pauperStatus = data.legalities?.pauper || 'unknown';
+    const isLegal = pauperStatus === 'legal';
+
+    console.log(`🎴 Pauper Legality: "${data.name}" → ${pauperStatus.toUpperCase()}`);
+
+    return {
+      success: true,
+      cardName: data.name,
+      isLegal,
+      status: pauperStatus,
+      originalQuery: cardName,
+      type: data.type_line
+    };
+  } catch (error) {
+    console.error(`❌ Pauper legality check error for "${cardName}":`, error.message);
+    return {
+      success: false,
+      originalQuery: cardName,
+      error: error.message
+    };
   }
 }

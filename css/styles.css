@@ -499,6 +499,13 @@ body {
   border-bottom: none;
 }
 
+.legality-status {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-left: var(--spacing-sm);
+}
+
 .unfound-cards {
   background: #FEE2E2;
   border-left: 4px solid var(--danger);

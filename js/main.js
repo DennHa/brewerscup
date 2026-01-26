@@ -9,6 +9,7 @@ import {
   parseDeckFromURL,
   normalizeDeckNames,
   validateAgainstBanlist,
+  validatePauperLegality,
   calculateDeckSize,
   getBanList
 } from './deck-validator.js';
@@ -148,19 +149,36 @@ window.previewDeck = async function() {
     // Validate against ban list
     const banList = await getBanList();
     const validation = validateAgainstBanlist(normalizedDeck, banList);
+    
+    // Check Pauper legality
+    console.log('🎴 Checking Pauper legality...');
+    const pauperValidation = await validatePauperLegality(normalizedDeck);
+    
     const deckSize = calculateDeckSize(normalizedDeck);
     
     console.log(`✅ Deck valid: ${validation.valid}, Size: ${deckSize} cards`);
     if (!validation.valid) {
       console.log('🚫 Banned cards found:', validation.bannedCards);
     }
+    if (!pauperValidation.valid) {
+      console.log('⚠️ Pauper illegal cards found:', pauperValidation.illegalCards);
+    }
+
+    // Combine validations
+    const combinedValidation = {
+      banListValid: validation.valid,
+      pauperValid: pauperValidation.valid,
+      overallValid: validation.valid && pauperValidation.valid,
+      bannedCards: validation.bannedCards,
+      illegalCards: pauperValidation.illegalCards
+    };
 
     // Store for later use
     currentDeck = normalizedDeck;
-    currentValidation = validation;
+    currentValidation = combinedValidation;
 
     // Display preview
-    displayPreview(normalizedDeck, validation, deckSize);
+    displayPreview(normalizedDeck, combinedValidation, deckSize);
     showLoading(false);
     
   } catch (error) {
@@ -221,9 +239,12 @@ window.submitDeck = async function() {
       })),
       deckSize: calculateDeckSize(currentDeck),
       verificationCode,
-      isValid: currentValidation.valid,
+      isValid: currentValidation.overallValid,
       bannedCards: currentValidation.bannedCards,
-      status: currentValidation.valid ? 'approved' : 'banned',
+      pauperIllegalCards: currentValidation.illegalCards,
+      banListValid: currentValidation.banListValid,
+      pauperValid: currentValidation.pauperValid,
+      status: currentValidation.overallValid ? 'approved' : 'issues',
       timestamp: serverTimestamp(),
       createdAt: new Date().toISOString()
     };
@@ -291,8 +312,8 @@ function displayPreview(deck, validation, deckSize) {
     </div>
     <div class="stat-item">
       <span class="stat-label">Status:</span>
-      <span class="stat-value ${validation.valid ? 'valid' : 'invalid'}">
-        ${validation.valid ? '✓ Valid' : '✗ Invalid (Banned Cards)'}
+      <span class="stat-value ${validation.overallValid ? 'valid' : 'invalid'}">
+        ${validation.overallValid ? '✓ Valid (Pauper Legal)' : '✗ Invalid'}
       </span>
     </div>
   `;
@@ -307,16 +328,34 @@ function displayPreview(deck, validation, deckSize) {
   `).join('');
   document.getElementById('preview-deck').innerHTML = '<h4>Decklist:</h4>' + deckListHtml;
 
-  // Show warnings if banned cards
-  if (!validation.valid) {
-    const warningsHtml = `
-      <div class="warning-header">⚠️ Banned Cards Found:</div>
+  // Show warnings
+  let warningsHtml = '';
+  
+  // Ban list warnings
+  if (!validation.banListValid && validation.bannedCards.length > 0) {
+    warningsHtml += `
+      <div class="warning-header">🚫 Banned Cards (Brewers Cup Banlist):</div>
       ${validation.bannedCards.map(card => `
         <div class="warning-item">
           ${card.quantity}x ${card.name}
         </div>
       `).join('')}
     `;
+  }
+  
+  // Pauper legality warnings
+  if (!validation.pauperValid && validation.illegalCards.length > 0) {
+    warningsHtml += `
+      <div class="warning-header">⚠️ Not Pauper Legal (Scryfall):</div>
+      ${validation.illegalCards.map(card => `
+        <div class="warning-item">
+          ${card.quantity}x ${card.name} <span class="legality-status">(${card.status})</span>
+        </div>
+      `).join('')}
+    `;
+  }
+  
+  if (warningsHtml) {
     document.getElementById('preview-warnings').innerHTML = warningsHtml;
     document.getElementById('preview-warnings').classList.remove('hidden');
   } else {

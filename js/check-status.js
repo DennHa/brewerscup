@@ -6,7 +6,7 @@
 
 import { db } from './firebase-config.js';
 import { collection, query, where, getDocs, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
-import { normalizeDeckNames, validateAgainstBanlist, getBanList } from './deck-validator.js';
+import { normalizeDeckNames, validateAgainstBanlist, validatePauperLegality, getBanList } from './deck-validator.js';
 
 let currentDeckId = null;
 let currentDeckData = null;
@@ -219,9 +219,21 @@ window.revalidateDeck = async function() {
     // Validate deck
     const banList = await getBanList();
     const validation = validateAgainstBanlist(normalizedDecklist, banList);
+    
+    // Check Pauper legality
+    const pauperValidation = await validatePauperLegality(normalizedDecklist);
+    
+    // Combine validations
+    const combinedValidation = {
+      banListValid: validation.valid,
+      pauperValid: pauperValidation.valid,
+      overallValid: validation.valid && pauperValidation.valid,
+      bannedCards: validation.bannedCards,
+      illegalCards: pauperValidation.illegalCards
+    };
 
     // Display revalidation results
-    displayRevalidationResults(normalizedDecklist, validation);
+    displayRevalidationResults(normalizedDecklist, combinedValidation);
 
     editError.classList.add('hidden');
 
@@ -252,8 +264,8 @@ function displayRevalidationResults(decklist, validation) {
     </div>
     <div class="detail-item">
       <span class="detail-label">Status</span>
-      <span class="detail-value ${validation.valid ? 'valid' : 'invalid'}">
-        ${validation.valid ? '✓ Valid' : '✗ Invalid (Banned Cards)'}
+      <span class="detail-value ${validation.overallValid ? 'valid' : 'invalid'}">
+        ${validation.overallValid ? '✓ Valid (Pauper Legal)' : '✗ Invalid'}
       </span>
     </div>
     ${validation.bannedCards && validation.bannedCards.length > 0 ? `
@@ -261,6 +273,14 @@ function displayRevalidationResults(decklist, validation) {
         <span class="detail-label">Banned Cards Found</span>
         <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap; margin-top: var(--spacing-sm);">
           ${validation.bannedCards.map(c => `<span class="badge" style="background: rgba(248, 113, 113, 0.2); color: var(--danger); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--danger);">${c.quantity}x ${escapeHtml(c.name || c.originalName)}</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+    ${validation.illegalCards && validation.illegalCards.length > 0 ? `
+      <div class="detail-item full-width">
+        <span class="detail-label">Not Pauper Legal (Scryfall)</span>
+        <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap; margin-top: var(--spacing-sm);">
+          ${validation.illegalCards.map(c => `<span class="badge" style="background: rgba(251, 191, 36, 0.2); color: var(--warning); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--warning);">${c.quantity}x ${escapeHtml(c.name)} (${c.status})</span>`).join('')}
         </div>
       </div>
     ` : ''}
@@ -318,6 +338,7 @@ window.saveUpdatedDeck = async function() {
     // Normalize and validate
     const normalizedDecklist = await normalizeDeckNames(decklist);
     const validation = validateAgainstBanlist(normalizedDecklist);
+    const pauperValidation = await validatePauperLegality(normalizedDecklist);
     const deckSize = decklist.reduce((sum, card) => sum + card.quantity, 0);
 
     // Update Firestore
@@ -325,15 +346,19 @@ window.saveUpdatedDeck = async function() {
     await updateDoc(deckRef, {
       decklist: normalizedDecklist,
       deckSize,
-      isValid: validation.valid,
-      bannedCards: validation.bannedCards || []
+      isValid: validation.valid && pauperValidation.valid,
+      bannedCards: validation.bannedCards || [],
+      pauperIllegalCards: pauperValidation.illegalCards || [],
+      banListValid: validation.valid,
+      pauperValid: pauperValidation.valid
     });
 
     // Update current data
     currentDeckData.decklist = normalizedDecklist;
     currentDeckData.deckSize = deckSize;
-    currentDeckData.isValid = validation.valid;
+    currentDeckData.isValid = validation.valid && pauperValidation.valid;
     currentDeckData.bannedCards = validation.bannedCards || [];
+    currentDeckData.pauperIllegalCards = pauperValidation.illegalCards || [];
 
     // Show success
     const editError = document.getElementById('edit-error');
