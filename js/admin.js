@@ -180,30 +180,80 @@ async function loadPlayers() {
     });
     
     console.log('Players loaded:', players.length, players);
+    console.log('🔍 DEBUG: Full player data array:', JSON.stringify(players, null, 2));
     
     // Display players
     const playersList = document.getElementById('players-list');
     const playerCount = document.getElementById('player-count');
     
     console.log('Players list element:', playersList);
+    console.log('Player count element:', playerCount);
     
     if (players.length > 0) {
       playerCount.textContent = `Total: ${players.length} deck(s)`;
-      playersList.innerHTML = players.map((player, idx) => `
-        <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <p style="font-weight: 700; color: var(--primary);">${player.playerName || 'Unknown'}</p>
-              <p style="font-size: 0.9rem; color: var(--text-muted);">Code: ${player.code}</p>
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">${new Date(player.timestamp).toLocaleString()}</p>
-            </div>
-            <div style="text-align: right;">
-              <button class="btn btn-secondary view-deck-btn" style="font-size: 0.85rem; margin-bottom: 0.5rem;" data-player-id="${idx}">View Deck</button>
-              <button class="btn btn-danger delete-deck-btn" style="font-size: 0.85rem; background: var(--danger); color: white;" data-player-id="${idx}">Delete</button>
+      const htmlContent = players.map((player, idx) => {
+        // Format timestamp - handle both Firestore timestamp objects and Date strings
+        let timeStr = 'Unknown';
+        if (player.timestamp) {
+          if (player.timestamp.seconds) {
+            // Firestore timestamp object
+            const date = new Date(player.timestamp.seconds * 1000);
+            timeStr = date.toLocaleString();
+          } else if (typeof player.timestamp === 'string') {
+            // ISO string
+            const date = new Date(player.timestamp);
+            timeStr = date.toLocaleString();
+          } else if (player.timestamp instanceof Date) {
+            timeStr = player.timestamp.toLocaleString();
+          }
+        }
+        
+        console.log(`🎴 CARD ${idx}: Player="${player.playerName}", Code="${player.verificationCode}", Status="${player.status}", Valid="${player.isValid}", TimeStr="${timeStr}"`);
+        
+        // Determine status icons
+        const statusIcon = player.status === 'approved' ? '✅' : player.status === 'pending' ? '⏳' : '❌';
+        const validityIcon = player.isValid ? '✓' : '✗';
+        const banListIcon = player.banListValid ? '✓' : '✗';
+        
+        return `
+          <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+              <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                  <p style="font-weight: 700; color: var(--primary);">${player.playerName || 'Unknown'}</p>
+                  <span style="font-size: 1rem;" title="Status: ${player.status}">${statusIcon}</span>
+                  <span style="font-size: 0.8rem; color: ${player.isValid ? 'var(--success)' : 'var(--danger)'};" title="Deck Valid: ${player.isValid}">Legal ${validityIcon}</span>
+                  <span style="font-size: 0.8rem; color: ${player.banListValid ? 'var(--success)' : 'var(--danger)'};" title="Ban List Valid: ${player.banListValid}">Banlist ${banListIcon}</span>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">📋 Code: <strong>${player.verificationCode || 'N/A'}</strong></p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">📅 ${timeStr}</p>
+              </div>
+              <div style="text-align: right;">
+                <button class="btn btn-secondary view-deck-btn" style="font-size: 0.85rem; margin-bottom: 0.5rem;" data-player-id="${idx}">View Deck</button>
+                <button class="btn btn-danger delete-deck-btn" style="font-size: 0.85rem; background: var(--danger); color: white;" data-player-id="${idx}">Delete</button>
+              </div>
             </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
+      
+      console.log('📝 GENERATED HTML:', htmlContent);
+      console.log('📝 HTML LENGTH:', htmlContent.length);
+      console.log('🎯 About to set innerHTML on element:', playersList);
+      console.log('🎯 playersList is null?', playersList === null);
+      console.log('🎯 playersList classList:', playersList?.classList);
+      
+      playersList.innerHTML = htmlContent;
+      
+      console.log('✅ HTML set to playersList. Current innerHTML length:', playersList.innerHTML.length);
+      console.log('✅ Current playersList content:', playersList.innerHTML.substring(0, 200), '...');
+      
+      // Double check - query the DOM directly for the cards
+      const cardsInDOM = document.querySelectorAll('.players-list div[style*="background"]');
+      console.log('🔍 Cards found in DOM after setting innerHTML:', cardsInDOM.length);
+      cardsInDOM.forEach((card, i) => {
+        console.log(`  Card ${i} text content:`, card.textContent.substring(0, 100));
+      });
       
       console.log('Setting up button event listeners...');
       
