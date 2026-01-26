@@ -1,13 +1,8 @@
 # Git ignore file
 # Exclude sensitive files from version control
 
-# Sensitive files - DO NOT COMMIT
-js/admin.js
-js/firebase-config.js
-
-# Firebase config (if you want to keep it private)
-# Uncomment the line below if you want to keep firebase-config.js out of git
-# js/firebase-config.js
+# Note: firebase-config.js and admin.js are now committed to GitHub
+# (They contain the production Firebase config needed for GitHub Pages)
 
 # Node modules (if using npm)
 node_modules/
