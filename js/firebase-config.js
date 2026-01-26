@@ -12,18 +12,13 @@ const firebaseConfig = {
 
 console.log('Firebase config module loading...');
 
-try {
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  console.log('Firebase initialized successfully');
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+console.log('Firebase initialized successfully');
 
-  // Initialize Firestore
-  const db = getFirestore(app);
-  console.log('Firestore initialized successfully');
+// Initialize Firestore
+const db = getFirestore(app);
+console.log('Firestore initialized successfully');
 
-  // Export for use in other modules
-  export { app, db };
-} catch (error) {
-  console.error('Error initializing Firebase:', error);
-  throw error;
-}
+// Export for use in other modules
+export { app, db };
