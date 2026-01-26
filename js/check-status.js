@@ -97,14 +97,22 @@ function displayDeckResult(deckData) {
     <div class="detail-item">
       <span class="detail-label">Status</span>
       <span class="detail-value ${deckData.isValid ? 'valid' : 'invalid'}">
-        ${deckData.isValid ? '✓ Valid' : '✗ Invalid (Banned Cards)'}
+        ${deckData.isValid ? '✓ Valid (Pauper Legal)' : '✗ Invalid'}
       </span>
     </div>
-    ${!deckData.isValid && deckData.bannedCards && deckData.bannedCards.length > 0 ? `
+    ${!deckData.banListValid && deckData.bannedCards && deckData.bannedCards.length > 0 ? `
       <div class="detail-item full-width">
         <span class="detail-label">Banned Cards</span>
         <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap; margin-top: var(--spacing-sm);">
           ${deckData.bannedCards.map(c => `<span class="badge" style="background: rgba(248, 113, 113, 0.2); color: var(--danger); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--danger);">${c.quantity}x ${escapeHtml(c.name)}</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+    ${!deckData.pauperValid && deckData.pauperIllegalCards && deckData.pauperIllegalCards.length > 0 ? `
+      <div class="detail-item full-width">
+        <span class="detail-label">Not Pauper Legal (Scryfall)</span>
+        <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap; margin-top: var(--spacing-sm);">
+          ${deckData.pauperIllegalCards.map(c => `<span class="badge" style="background: rgba(251, 191, 36, 0.2); color: var(--warning); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--warning);">${c.quantity}x ${escapeHtml(c.name)} (${c.status})</span>`).join('')}
         </div>
       </div>
     ` : ''}
@@ -461,12 +469,17 @@ function escapeHtml(unsafe) {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('📄 DOMContentLoaded - setting up event listeners');
   
-  document.getElementById('verificationCode')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      console.log('⌨️ Enter key pressed');
-      checkDeck();
-    }
-  });
+  const verificationCodeInput = document.getElementById('verificationCode');
+  if (verificationCodeInput) {
+    verificationCodeInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        console.log('⌨️ Enter key pressed');
+        window.checkDeck();
+      }
+    });
+  } else {
+    console.error('❌ Verification code input not found!');
+  }
   
   // Add click listeners for buttons
   const lookupBtn = document.getElementById('lookup-btn');
@@ -474,8 +487,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (lookupBtn) {
     lookupBtn.addEventListener('click', () => {
       console.log('🖱️ Lookup button clicked');
-      checkDeck();
+      window.checkDeck();
     });
+  } else {
+    console.error('❌ Lookup button not found!');
   }
   
   document.getElementById('edit-deck-btn')?.addEventListener('click', () => {
