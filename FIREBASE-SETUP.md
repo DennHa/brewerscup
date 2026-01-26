@@ -1,263 +1,158 @@
-# Firebase Setup Guide - Step by Step
+# Firebase Setup Guide
 
-This guide walks you through setting up Firebase for the MTG Brewers Cup application.
+This document provides step-by-step instructions to configure Firebase Firestore for the MTG Brewers Cup app.
+
+## Quick Overview
+
+The app uses Firebase Firestore to store:
+- **Decks**: User submissions with mainboard/sideboard cards, validation status
+- **Ban List**: Managed by admin panel, used for deck validation
 
 ## Prerequisites
 
 - Google account (for Firebase Console)
-- GitHub account (for hosting)
-- Web browser
+- Modern web browser
+- Text editor for updating configuration
 
 ## Step 1: Create Firebase Project
 
-1. Open [Firebase Console](https://console.firebase.google.com)
+1. Go to [Firebase Console](https://console.firebase.google.com)
 2. Sign in with your Google account
-3. Click **"Create a project"**
-4. Enter project name: **MTG Brewers Cup** (or your preferred name)
-5. Click **Continue**
-6. Disable "Enable Google Analytics for this project" (optional)
+3. Click **Create a project**
+4. Enter project name: **brewerscup** (or your choice)
+5. Choose your location
+6. Disable "Enable Google Analytics" (optional)
 7. Click **Create project**
-8. Wait for project creation (30 seconds - 2 minutes)
+8. Wait for project creation to complete
 
-## Step 2: Create Web App
+## Step 2: Create Firestore Database
 
-1. In Firebase Console, find your project
-2. In the project overview, click the **</> ** (web) icon
-3. Enter app name: **MTG Brewers Cup Web**
-4. Check "Also set up Firebase Hosting for this project" (optional)
-5. Click **Register app**
+1. In Firebase Console, go to **Build** → **Firestore Database**
+2. Click **Create database**
+3. Select region (closest to your location, e.g., `europe-west1`)
+4. Choose **Start in production mode**
+5. Click **Create**
 
-## Step 3: Copy Firebase Configuration
+## Step 3: Configure Security Rules
 
-You'll see a code snippet like this:
+1. Click the **Rules** tab at the top
+2. Replace all content with this:
 
 ```javascript
-const firebaseConfig = {
-  apiKey: "AIzaSyDEXAMPLE...",
-  authDomain: "mtg-brewers-cup-xxxxx.firebaseapp.com",
-  projectId: "mtg-brewers-cup-xxxxx",
-  storageBucket: "mtg-brewers-cup-xxxxx.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abc123def456"
-};
-```
-
-**Copy this entire config object** (you'll need it in Step 7)
-
-## Step 4: Set Up Firestore Database
-
-1. In Firebase Console, go to **Build** section (left menu)
-2. Click **Firestore Database**
-3. Click **Create database**
-4. Choose **Start in production mode**
-5. Select location (usually closest to your users):
-   - US: `us-east1`
-   - Europe: `europe-west1`
-   - Asia: `asia-east1`
-6. Click **Create**
-7. Wait for database creation (30 seconds)
-
-## Step 5: Set Up Firestore Security Rules
-
-**This step is CRUCIAL for security**
-
-1. In Firestore Database, click the **Rules** tab
-2. Delete the default rules (select all and delete)
-3. **Copy ONLY the text between the lines below** (do NOT copy the ```javascript or ``` lines):
-
-```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow anyone to read all decks
+    // Allow public read/write for decks
     match /decks/{document=**} {
-      allow read;
-      // Allow authenticated users to create new decks
-      allow create: if request.auth != null;
-      // Allow anyone to update decks (users can edit their own via verification code)
-      allow update: if true;
-      // Prevent deletes
-      allow delete: if false;
+      allow create: if true;
+      allow read: if true;
+      allow update, delete: if true;
     }
-    
-    // Admin section - ban list (read by everyone, write by admins only)
-    match /admin/{document=**} {
-      // Anyone can read the ban list
-      allow read;
-      // Only allow updates to admin collection (controlled via app logic)
-      allow write: if true;
-    }
-  }
-}
-```
+1. In Firebase Console, click **Settings** ⚙️ (top right)
+2. Select **Project Settings**
+3. Go to **General** tab
+4. Scroll down to **Your apps**
+5. Click the **Web app icon** (`</>`)
+6. You should see a code block with `firebaseConfig`
+7. Copy the entire config object
 
-⚠️ **IMPORTANT:** Copy from `rules_version` to the final `}` - do NOT include the ` ```javascript ` or ` ``` ` lines!
-
-4. Paste into the Firestore Rules editor
-5. Click **Publish**
-
-**What these rules mean:**
-- ✅ Anyone can READ decks (public data)
-- ✅ Authenticated users can CREATE decks
-- ✅ Anyone can UPDATE decks (users verify themselves with verification code)
-- ❌ Nobody can DELETE decks (maintain deck history)
-- ✅ Anyone can READ the ban list from `admin/banlist`
-- ✅ Admin dashboard can UPDATE the ban list (controlled by app-level verification)
-
-## Step 6: Set Up Firebase Authentication
-
-1. In Firebase Console, go to **Build** → **Authentication**
-2. Click **Get started** (or **Sign-in method** if already started)
-3. Enable **Google**:
-   - Click Google provider
-   - Enable the toggle
-   - Click Save
-4. Enable **Email/Password**:
-   - Click Email/Password provider
-   - Enable "Email/Password" toggle
-   - Disable "Email link (passwordless sign-in)"
-   - Click Save
-
-**These authentication methods allow:**
-- ✅ Google login for admin dashboard
-- ✅ Email/password login for admins
-- ✅ Unauthenticated read access for public
-
-## Step 7: Add Firebase Config to Your App
-
-1. Open your project file: `js/firebase-config.js`
-2. Find this section:
-
-```javascript
-const firebaseConfig = {
-  apiKey: "AIzaSyDEXAMPLE_REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef1234567890"
-};
-```
-
-3. Replace with YOUR config from Step 3
-4. Save the file
-
-**Example of filled config:**
+**Example config** (replace with your actual values):
 
 ```javascript
 const firebaseConfig = {
   apiKey: "AIzaSyDEXAMPLE1234567890abcdefghijk",
-  authDomain: "mtg-brewers-cup-12345.firebaseapp.com",
-  projectId: "mtg-brewers-cup-12345",
-  storageBucket: "mtg-brewers-cup-12345.appspot.com",
+  authDomain: "brewerscup-12345.firebaseapp.com",
+  projectId: "brewerscup-12345",
+  storageBucket: "brewerscup-12345.appspot.com",
   messagingSenderId: "123456789012",
   appId: "1:123456789012:web:abc123def456ghi"
 };
 ```
 
-## Step 8: Set Up Admin Users (Optional)
+## Step 5: Update Your App Configuration
 
-To add admins who can access the admin dashboard:
+1. In your project folder, locate `js/firebase-config.js`
+2. Replace the placeholder values with your config from Step 4
+3. Save the file
 
-1. Go to **Authentication** → **Users** tab
-2. Click **Add user**
-3. Enter email and password
-4. Click **Create user**
-5. Repeat for each admin
-6. Save their credentials securely
+## Step 6: Initialize Collections
 
-**These admins can login at the Admin page with their email/password**
+When the app first runs, it will automatically create the `decks` collection. The ban list is managed via the admin panel.
 
-## Step 9: Create First Collection (Optional)
+**Firestore Structure:**
 
-This happens automatically on first submission, but you can create it manually:
+```
+/decks
+  /{verificationCode} - Each submitted deck
+    - playerName (string)
+    - mainboard (array: {name, quantity})
+    - sideboard (array: {name, quantity})
+    - mainboardSize (number)
+    - sideboardSize (number)
+    - banlistValid (boolean)
+    - pauperValid (boolean)
+    - pauperIllegalCards (array)
+    - submittedAt (timestamp)
+    - lastModified (timestamp)
 
-1. Go to **Firestore Database**
-2. Click **+ Start collection**
-3. Collection ID: `decks`
-4. Click **Next**
-5. Click **Save** (no documents needed yet)
+/admin
+  /banlist - Ban list for validation
+    - cards (array of card names)
+    - lastUpdated (timestamp)
+```
 
 ## Testing Your Setup
 
-### Test 1: Can you access Firestore?
-- Go to Firebase Console → Firestore Database
-- You should see the "decks" collection
-- If you see errors, check your security rules
+### Check 1: Firestore Access
+1. Go to Firebase Console → **Firestore Database**
+2. You should see the empty database
+3. Try submitting a test deck from your app
+4. Refresh Firestore - you should see it in `/decks`
 
-### Test 2: Can you authenticate?
-- Go to your app admin page
-- Try signing in with Google
-- If you see errors, check authentication is enabled
+### Check 2: Ban List
+1. Go to your app's admin panel
+2. The ban list should load without errors
+3. Try adding a card to the ban list
 
-### Test 3: Can you submit a deck?
-- Go to your main page
-- Paste this test deck:
-  ```
-  4x Black Lotus
-  4x Ancestral Recall
-  4x Time Walk
-  53x Mountain
-  ```
-- Click Preview
-- Should find 3 cards + 1 unfound (test the error handling)
+### Check 3: Deck Status Lookup
+1. Submit a test deck
+2. Get the verification code (e.g., STORM-DRAKE)
+3. Go to check-status page
+4. Enter the code - your deck should appear
 
-### Test 4: Can you check decks?
-- Go to check-status page
-- Enter a verification code from your submission
-- Should see your deck details
+## Troubleshooting
 
-## If Something Goes Wrong
+| Error | Solution |
+|-------|----------|
+| "Failed to fetch firebase-config.js" | Create `js/firebase-config.js` from template, add credentials |
+| "Permission denied" in console | Check security rules are published correctly |
+| Database not appearing | Ensure Firestore Database (not Realtime DB) was created |
+| Cards not found during submission | Card names must match Scryfall exactly; try paste from Moxfield |
+| Can't see submitted decks | Check Firestore Console for data; verify security rules |
 
-### Error: "Firebase config is invalid"
-→ Check that all fields in `firebase-config.js` are filled in correctly
-→ Make sure there are no typos
+## Security Considerations
 
-### Error: "Permission denied" in console
-→ Check security rules in Firestore
-→ Make sure you used the rules from Step 5
+✅ **What's Safe to Share:**
+- API Key (only works within security rules)
+- Auth Domain
+- Project ID
+- Storage Bucket
 
-### Error: "Authentication not enabled"
-→ Go to Firebase Console → Authentication
-→ Enable at least one provider (Google or Email/Password)
+❌ **Never Share:**
+- Admin credentials
+- Your local `firebase-config.js`
+- Database backups with sensitive data
 
-### Cards not found
-→ This is normal - card names must match Scryfall exactly
-→ Try using Moxfield/Archidekt URL instead
+## Need Help?
 
-### Can't login to admin
-→ Make sure you created admin user in Step 8
-→ Try with Google login if email login doesn't work
-→ Check that authentication is enabled
+- [Firestore Documentation](https://firebase.google.com/docs/firestore)
+- [Security Rules Guide](https://firebase.google.com/docs/firestore/security/get-started)
+- [Firebase Console](https://console.firebase.google.com)
 
-## Firebase Console URLs
+---
 
-After setup, bookmark these links:
-
-- **Firestore Database**: https://console.firebase.google.com/project/YOUR-PROJECT-ID/firestore
-- **Authentication**: https://console.firebase.google.com/project/YOUR-PROJECT-ID/authentication
-- **Project Settings**: https://console.firebase.google.com/project/YOUR-PROJECT-ID/settings/general
-
-Replace `YOUR-PROJECT-ID` with your actual project ID.
-
-## Security Best Practices
-
-✅ **DO:**
-- Keep security rules strict
-- Regularly monitor Firestore usage
-- Use authentication for admin access
-- Back up important data
-
-❌ **DON'T:**
-- Share your API key privately (it's meant to be public with security rules)
-- Store sensitive user data
-- Leave Firestore in "test mode"
-- Use weak passwords for admin accounts
-
-## Next Steps
-
-1. Add your ban list to `js/deck-validator.js`
-2. Deploy to GitHub Pages (see README.md)
+**Last Updated**: January 26, 2026  
+**Version**: 2.0
 3. Share the URL with players
 4. Monitor submissions in the admin dashboard
 
