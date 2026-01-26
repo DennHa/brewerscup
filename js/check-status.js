@@ -120,9 +120,11 @@ function displayDeckResult(deckData) {
 
   detailsDiv.innerHTML = detailsHtml;
 
-  // Display deck list
+  // Display mainboard
+  let deckListHtml = '<h4 style="margin-bottom: var(--spacing-md);">Mainboard</h4>';
+  
   if (deckData.decklist && deckData.decklist.length > 0) {
-    const deckListHtml = deckData.decklist
+    deckListHtml += deckData.decklist
       .sort((a, b) => b.quantity - a.quantity)
       .map(card => `
         <div class="deck-card-item">
@@ -131,9 +133,23 @@ function displayDeckResult(deckData) {
         </div>
       `)
       .join('');
-
-    document.getElementById('check-deck-list').innerHTML = deckListHtml;
   }
+  
+  // Display sideboard if present
+  if (deckData.sideboard && deckData.sideboard.length > 0) {
+    deckListHtml += '<h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md); padding-top: var(--spacing-lg); border-top: 1px solid var(--border);">Sideboard</h4>';
+    deckListHtml += deckData.sideboard
+      .sort((a, b) => b.quantity - a.quantity)
+      .map(card => `
+        <div class="deck-card-item sideboard-card-item">
+          <span class="deck-card-qty">${card.quantity}x</span>
+          <span class="deck-card-name">${escapeHtml(card.name || card.originalName)}</span>
+        </div>
+      `)
+      .join('');
+  }
+
+  document.getElementById('check-deck-list').innerHTML = deckListHtml;
 
   resultDiv.classList.remove('hidden');
 }

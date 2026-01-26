@@ -105,9 +105,12 @@
                     <div class="verification-code-box">
                         <p class="label">Your Verification Code</p>
                         <div class="code-display" id="codeDisplay">ABC12345</div>
-                        <button class="btn btn-secondary" id="copy-code-btn">📋 Copy</button>
+                        <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-md);">
+                            <button class="btn btn-secondary" id="copy-code-btn" style="flex: 1;">📋 Copy</button>
+                            <button class="btn btn-secondary" id="view-saved-codes-btn" style="flex: 1;">💾 View Saved</button>
+                        </div>
                         <p class="help-text" style="margin-top: 1rem; color: #6B7280;">
-                            Save this code to look up your deck status later. Share it with organizers if needed.
+                            ✓ Code copied to clipboard! Your browser may offer to save this code.
                         </p>
                     </div>
 
@@ -142,6 +145,21 @@
                     <div class="progress-current">
                         <span id="progress-current-card">Initializing...</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Codes Modal -->
+        <div id="saved-codes-modal" class="modal hidden">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3>💾 Your Saved Verification Codes</h3>
+                    <button class="close-btn" onclick="document.getElementById('saved-codes-modal').classList.add('hidden')">✕</button>
+                </div>
+                <div id="saved-codes-list" class="modal-body">
+                    <p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">
+                        No saved codes found. Submit a deck to save verification codes.
+                    </p>
                 </div>
             </div>
         </div>

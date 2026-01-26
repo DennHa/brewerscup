@@ -92,6 +92,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // View saved codes button
+  const viewSavedCodesBtn = document.getElementById('view-saved-codes-btn');
+  if (viewSavedCodesBtn) {
+    viewSavedCodesBtn.addEventListener('click', () => {
+      console.log('🖱️ View saved codes button clicked');
+      showSavedCodes();
+    });
+  }
+  
   // Reset form button
   const resetFormBtn = document.getElementById('reset-form-btn');
   if (resetFormBtn) {
@@ -192,7 +201,7 @@ window.previewDeck = async function() {
     currentValidation = combinedValidation;
 
     // Display preview
-    displayPreview(normalizedDeck, combinedValidation, deckSize, normalizedSideboard.length);
+    displayPreview(normalizedDeck, combinedValidation, deckSize, normalizedSideboard.length, normalizedSideboard);
     showLoading(false);
     
   } catch (error) {
@@ -330,7 +339,7 @@ async function getDeckInput() {
 /**
  * Display the deck preview
  */
-function displayPreview(deck, validation, deckSize, sideboardCount = 0) {
+function displayPreview(deck, validation, deckSize, sideboardCount = 0, sideboard = []) {
   const previewSection = document.getElementById('preview-section');
   
   // Show stats
@@ -347,7 +356,7 @@ function displayPreview(deck, validation, deckSize, sideboardCount = 0) {
     ` : ''}
     <div class="stat-item">
       <span class="stat-label">Unique Cards:</span>
-      <span class="stat-value">${deck.length}</span>
+      <span class="stat-value">${deck.length + sideboard.length}</span>
     </div>
     <div class="stat-item">
       <span class="stat-label">Status:</span>
@@ -358,14 +367,26 @@ function displayPreview(deck, validation, deckSize, sideboardCount = 0) {
   `;
   document.getElementById('preview-stats').innerHTML = statsHtml;
 
-  // Show deck list
-  const deckListHtml = deck.map(card => `
+  // Show mainboard
+  const mainboardHtml = deck.map(card => `
     <div class="deck-card">
       <span class="card-quantity">${card.quantity}x</span>
       <span class="card-name">${card.normalizedName || card.originalName}</span>
     </div>
   `).join('');
-  document.getElementById('preview-deck').innerHTML = '<h4>Decklist:</h4>' + deckListHtml;
+  
+  // Show sideboard if present
+  const sideboardHtml = sideboard.length > 0 ? `
+    <h4 style="margin-top: var(--spacing-lg); padding-top: var(--spacing-lg); border-top: 1px solid var(--border);">Sideboard</h4>
+    ${sideboard.map(card => `
+      <div class="deck-card sideboard-card">
+        <span class="card-quantity">${card.quantity}x</span>
+        <span class="card-name">${card.normalizedName || card.originalName}</span>
+      </div>
+    `).join('')}
+  ` : '';
+  
+  document.getElementById('preview-deck').innerHTML = '<h4>Mainboard</h4>' + mainboardHtml + sideboardHtml;
 
   // Show warnings
   let warningsHtml = '';
@@ -416,6 +437,43 @@ function showSuccessPage(verificationCode, deckData) {
   
   // Display verification code
   document.getElementById('codeDisplay').textContent = verificationCode;
+  
+  // Auto-copy to clipboard
+  navigator.clipboard.writeText(verificationCode).then(() => {
+    console.log('✅ Verification code copied to clipboard');
+    // Show temporary feedback
+    const codeDisplay = document.getElementById('codeDisplay');
+    const originalText = codeDisplay.textContent;
+    codeDisplay.textContent = '✓ Copied!';
+    setTimeout(() => {
+      codeDisplay.textContent = originalText;
+    }, 2000);
+  }).catch(err => {
+    console.warn('Could not copy to clipboard:', err);
+  });
+  
+  // Store in localStorage for easy access
+  try {
+    localStorage.setItem('lastVerificationCode', verificationCode);
+    
+    // Store with unique key for multiple submissions
+    const submissionData = {
+      code: verificationCode,
+      playerName: deckData.playerName,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Store most recent
+    localStorage.setItem('lastDeckSubmission', JSON.stringify(submissionData));
+    
+    // Also store with timestamp key for history
+    const key = `lastDeckSubmission_${Date.now()}`;
+    localStorage.setItem(key, JSON.stringify(submissionData));
+    
+    console.log('✅ Verification code saved to browser storage');
+  } catch (err) {
+    console.warn('Could not save to localStorage:', err);
+  }
 
   // Display deck info
   const deckInfo = `
@@ -425,19 +483,31 @@ function showSuccessPage(verificationCode, deckData) {
       <span>${deckData.playerName}</span>
     </div>
     <div class="info-row">
-      <span>Deck Size:</span>
-      <span>${deckData.deckSize} cards</span>
+      <span>Mainboard:</span>
+      <span>${deckData.mainboardSize} cards</span>
     </div>
+    ${deckData.sideboardSize > 0 ? `
+    <div class="info-row">
+      <span>Sideboard:</span>
+      <span>${deckData.sideboardSize} cards</span>
+    </div>
+    ` : ''}
     <div class="info-row">
       <span>Status:</span>
       <span class="${deckData.isValid ? 'valid' : 'invalid'}">
-        ${deckData.isValid ? '✓ Valid' : '✗ Invalid (Banned Cards)'}
+        ${deckData.isValid ? '✓ Valid' : '✗ Invalid'}
       </span>
     </div>
-    ${!deckData.isValid ? `
+    ${!deckData.isValid && deckData.bannedCards && deckData.bannedCards.length > 0 ? `
       <div class="info-row banned">
         <span>Banned Cards:</span>
         <span>${deckData.bannedCards.map(c => `${c.quantity}x ${c.name}`).join(', ')}</span>
+      </div>
+    ` : ''}
+    ${!deckData.pauperValid && deckData.pauperIllegalCards && deckData.pauperIllegalCards.length > 0 ? `
+      <div class="info-row banned">
+        <span>Non-Pauper:</span>
+        <span>${deckData.pauperIllegalCards.map(c => `${c.quantity}x ${c.name}`).join(', ')}</span>
       </div>
     ` : ''}
   `;
@@ -518,6 +588,81 @@ window.resetForm = function() {
   document.getElementById('success-section').classList.add('hidden');
   document.getElementById('preview-section').classList.add('hidden');
   hideError();
+};
+
+/**
+ * Show saved verification codes from browser storage
+ */
+window.showSavedCodes = function() {
+  const modal = document.getElementById('saved-codes-modal');
+  const savedCodesList = document.getElementById('saved-codes-list');
+  
+  try {
+    // Try to get all saved submissions from localStorage
+    let submissions = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith('lastDeckSubmission_')) {
+        try {
+          const data = JSON.parse(localStorage.getItem(key));
+          submissions.push(data);
+        } catch (e) {
+          console.warn('Could not parse stored submission:', e);
+        }
+      }
+    }
+    
+    // Also check for the most recent one
+    const recent = localStorage.getItem('lastDeckSubmission');
+    if (recent && recent.includes('{')) {
+      try {
+        const data = JSON.parse(recent);
+        if (!submissions.find(s => s.code === data.code)) {
+          submissions.push(data);
+        }
+      } catch (e) {
+        console.warn('Could not parse recent submission:', e);
+      }
+    }
+    
+    if (submissions.length > 0) {
+      // Sort by timestamp, most recent first
+      submissions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      const codesHTML = submissions.map(sub => `
+        <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="font-weight: 700; color: var(--primary);">${escapeHtml(sub.playerName)}</p>
+              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: var(--spacing-sm);">${new Date(sub.timestamp).toLocaleString()}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="font-family: monospace; font-size: 1.2rem; letter-spacing: 2px; color: var(--primary); margin-bottom: var(--spacing-sm);">${sub.code}</p>
+              <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${sub.code}'); this.textContent='✓ Copied!'; setTimeout(() => this.textContent='Copy', 2000);" style="font-size: 0.85rem; padding: var(--spacing-sm) var(--spacing-md);">📋 Copy</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      savedCodesList.innerHTML = codesHTML;
+    } else {
+      savedCodesList.innerHTML = `
+        <p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">
+          No saved codes found. Submit a deck to save verification codes to your browser.
+        </p>
+      `;
+    }
+  } catch (err) {
+    console.error('Error loading saved codes:', err);
+    savedCodesList.innerHTML = `
+      <p style="color: var(--danger); text-align: center; padding: var(--spacing-lg);">
+        Error loading saved codes. Please try again.
+      </p>
+    `;
+  }
+  
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
 };
 
 /**
