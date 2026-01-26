@@ -1229,6 +1229,19 @@ body {
     --spacing-2xl: 1.5rem;
   }
 
+  .input-with-button {
+    flex-direction: column;
+    gap: var(--spacing-md);
+  }
+
+  .input-with-button .form-input {
+    width: 100%;
+  }
+
+  .input-with-button .btn {
+    width: 100%;
+  }
+
   .navbar {
     padding: var(--spacing-md) 0;
   }
