@@ -14,6 +14,18 @@ import {
   getBanList
 } from './deck-validator.js';
 
+// Utility function to escape HTML special characters
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
 // State management
 let currentInputType = 'text';
 let currentDeck = null;
