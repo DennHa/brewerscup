@@ -157,7 +157,7 @@ async function loadPlayers() {
     
     if (players.length > 0) {
       playerCount.textContent = `Total: ${players.length} deck(s)`;
-      playersList.innerHTML = players.map(player => `
+      playersList.innerHTML = players.map((player, idx) => `
         <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
@@ -166,12 +166,21 @@ async function loadPlayers() {
               <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">${new Date(player.timestamp).toLocaleString()}</p>
             </div>
             <div style="text-align: right;">
-              <button class="btn btn-secondary" style="font-size: 0.85rem; margin-bottom: 0.5rem;">View Deck</button>
+              <button class="btn btn-secondary" style="font-size: 0.85rem; margin-bottom: 0.5rem;" onclick="viewDeck(${JSON.stringify(player).replace(/"/g, '&quot;')})">View Deck</button>
               <button class="btn btn-danger" style="font-size: 0.85rem; background: var(--danger); color: white;">Delete</button>
             </div>
           </div>
         </div>
       `).join('');
+      
+      // Set up modal close button
+      const modalCloseBtn = document.getElementById('modal-close-btn');
+      if (modalCloseBtn) {
+        modalCloseBtn.onclick = () => {
+          const modal = document.getElementById('deck-modal');
+          if (modal) modal.classList.add('hidden');
+        };
+      }
     } else {
       playerCount.textContent = 'No submissions yet';
       playersList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No player submissions found.</p>';
@@ -198,22 +207,27 @@ async function loadBanList() {
       bannedCards.push({ id: doc.id, ...doc.data() });
     });
     
-    console.log('Ban list loaded:', bannedCards.length);
+    console.log('Ban list loaded:', bannedCards.length, bannedCards);
     
     const banlistCards = document.getElementById('banlist-cards');
-    if (bannedCards.length > 0) {
-      banlistCards.innerHTML = bannedCards.map(card => `
-        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm); border: 1px solid var(--border);">
-          <span style="font-weight: 600; color: var(--primary);">${card.cardName || card.name}</span>
-          <button class="btn btn-danger" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--danger); color: white;" onclick="removeFromBanList('${card.id}')">Remove</button>
-        </div>
-      `).join('');
+    if (banlistCards) {
+      if (bannedCards.length > 0) {
+        banlistCards.innerHTML = bannedCards.map(card => `
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm); border: 1px solid var(--border);">
+            <span style="font-weight: 600; color: var(--primary);">${card.cardName || card.name}</span>
+            <button class="btn btn-danger" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--danger); color: white;" onclick="removeFromBanList('${card.id}')">Remove</button>
+          </div>
+        `).join('');
+      } else {
+        banlistCards.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No banned cards yet.</p>';
+      }
     } else {
-      banlistCards.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No banned cards yet.</p>';
+      console.error('banlist-cards element not found');
     }
     
     // Set up add card button
     const addCardBtn = document.getElementById('add-card-btn');
+    console.log('Add card button element:', addCardBtn);
     if (addCardBtn) {
       addCardBtn.onclick = addToBanList;
     }
@@ -229,11 +243,15 @@ async function loadBanList() {
 
 // Add card to ban list
 async function addToBanList() {
+  console.log('addToBanList called');
   const cardNameInput = document.getElementById('new-banned-card');
   const cardName = cardNameInput.value.trim();
   const banlistError = document.getElementById('banlist-error');
   
+  console.log('Card name:', cardName);
+  
   if (!cardName) {
+    console.log('No card name entered');
     if (banlistError) {
       banlistError.textContent = 'Please enter a card name';
       banlistError.classList.remove('hidden');
@@ -244,16 +262,16 @@ async function addToBanList() {
   try {
     const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     const banlistCollection = collection(db, 'banlist');
-    await addDoc(banlistCollection, {
+    const docRef = await addDoc(banlistCollection, {
       cardName: cardName,
       addedBy: currentUser.email,
       timestamp: new Date().toISOString()
     });
     
-    console.log('Card added to ban list:', cardName);
+    console.log('Card added to ban list:', cardName, 'Doc ID:', docRef.id);
     if (banlistError) banlistError.classList.add('hidden');
     cardNameInput.value = '';
-    loadBanList(); // Reload the list
+    await loadBanList(); // Reload the list
   } catch (err) {
     console.error('Error adding card:', err);
     if (banlistError) {
@@ -265,12 +283,49 @@ async function addToBanList() {
 
 // Remove card from ban list
 async function removeFromBanList(cardId) {
+  console.log('Removing card from ban list:', cardId);
   try {
     const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     await deleteDoc(doc(db, 'banlist', cardId));
-    console.log('Card removed from ban list');
-    loadBanList(); // Reload the list
+    console.log('Card removed from ban list successfully');
+    await loadBanList(); // Reload the list
   } catch (err) {
     console.error('Error removing card:', err);
+  }
+}
+
+// View deck modal
+function viewDeck(playerData) {
+  console.log('View deck called with data:', playerData);
+  const modal = document.getElementById('deck-modal');
+  const modalPlayerName = document.getElementById('modal-player-name');
+  const modalVerificationCode = document.getElementById('modal-verification-code');
+  const modalDeckContent = document.getElementById('modal-deck-content');
+  
+  if (modalPlayerName) modalPlayerName.textContent = playerData.playerName || 'Unknown';
+  if (modalVerificationCode) modalVerificationCode.textContent = 'Code: ' + playerData.code;
+  
+  if (modalDeckContent) {
+    const deckHTML = `
+      <div style="margin-bottom: var(--spacing-lg);">
+        <h3>Mainboard</h3>
+        <div style="background: var(--bg-input); padding: var(--spacing-md); border-radius: var(--radius-md); max-height: 300px; overflow-y: auto;">
+          <pre style="margin: 0; white-space: pre-wrap; word-break: break-word;">${playerData.mainboard || 'No mainboard data'}</pre>
+        </div>
+      </div>
+      ${playerData.sideboard ? `
+        <div>
+          <h3>Sideboard</h3>
+          <div style="background: var(--bg-input); padding: var(--spacing-md); border-radius: var(--radius-md); max-height: 300px; overflow-y: auto;">
+            <pre style="margin: 0; white-space: pre-wrap; word-break: break-word;">${playerData.sideboard}</pre>
+          </div>
+        </div>
+      ` : ''}
+    `;
+    modalDeckContent.innerHTML = deckHTML;
+  }
+  
+  if (modal) {
+    modal.classList.remove('hidden');
   }
 }
