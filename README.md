@@ -1,327 +1,348 @@
-# 🧙 MTG Brewers Cup - Deck Verification System
+# MTG Brewers Cup - Deck Verification System
 
-A modern, clean web application for Magic: The Gathering Brewers Cup deck verification. Players can submit decks, validate them against a ban list, and receive unique verification codes. Admins can view all submissions through a protected dashboard.
+A web-based deck submission and verification system for Magic: The Gathering Pauper format competitive events.
 
-## Features
+![Version](https://img.shields.io/badge/version-1.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-active-brightgreen)
 
-✅ **Deck Submission**
-- Submit decks via Moxfield or Archidekt URLs
-- Paste raw deck lists in common text formats
-- Automatic card name normalization using Scryfall API
-- Live deck preview before submission
+## ✨ Features
 
-✅ **Validation & Ban List**
-- Check all cards against configurable ban list
-- Clear feedback on banned cards
-- Detailed error reporting if cards aren't found
+### Player Features
+- 🃏 **Submit MTG Pauper Decks** - Upload mainboard and sideboard separately
+- 🔍 **Automatic Card Normalization** - Scryfall API fuzzy matching
+- ✅ **Pauper Legality Check** - Validates all cards via Scryfall legality data
+- 🚫 **Ban List Validation** - Against event-specific ban list
+- 🎟️ **Memorable Codes** - Verification codes in format: ADJECTIVE-NOUN (e.g., STORM-DRAKE)
+- 📋 **Check Deck Status** - Look up and edit submitted decks anytime
+- 💾 **Browser Storage** - Saves verification codes locally with auto-copy
+- 📄 **Export Decks** - Download as text file
 
-✅ **Verification System**
-- Generate unique 8-character verification codes
-- Create printable/savable QR codes
-- Easy deck lookup by verification code
+### Admin Features
+- 👥 **Player Management** - View all submissions and delete if needed
+- 🚫 **Ban List Management** - Add/remove cards in real-time
+- 📊 **Deck Statistics** - View deck composition, validation status, Pauper legality
+- 💾 **Data Export** - Export decks as formatted text files
+- 🔐 **Secure Access** - Admin-only dashboard
 
-✅ **Admin Dashboard**
-- View all submitted decks
-- Filter by player name and validation status
-- View detailed deck information
-- Statistics about submissions
+## 🚀 Quick Start
 
-✅ **User Experience**
-- Mobile-friendly responsive design
-- Clean, modern interface
-- Fast, reliable performance
-- Error handling and clear messaging
+### Prerequisites
+- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Firebase project with Firestore database
+- Text editor for configuration
 
-## Tech Stack
+### Setup (5 minutes)
 
-- **Frontend**: HTML5, CSS3, JavaScript (ES6 Modules)
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Authentication
-- **Hosting**: GitHub Pages (static site)
-- **APIs**: Scryfall API for card data, Moxfield/Archidekt APIs for deck imports
-- **QR Codes**: QRCode.js library
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/DennHa/brewerscup.git
+   cd brewerscup
+   ```
 
-## Project Structure
+2. **Create Firebase configuration**
+   ```bash
+   cp js/firebase-config.example.js js/firebase-config.js
+   cp js/admin.js.example js/admin.js
+   ```
+
+3. **Configure Firebase credentials**
+   - Open [Firebase Console](https://console.firebase.google.com)
+   - Create a new project or select existing
+   - Get your `firebaseConfig` from Project Settings
+   - Update `js/firebase-config.js` with your credentials
+
+4. **Update admin credentials** (optional)
+   - Edit `js/admin.js` with your admin email/password
+
+5. **Run locally**
+   ```bash
+   # Python 3
+   python -m http.server 8000
+   
+   # Or use any local server (VS Code Live Server, Node.js, etc.)
+   ```
+
+6. **Visit your app**
+   - Main: http://localhost:8000
+   - Check Status: http://localhost:8000/check-status.html
+   - Admin: http://localhost:8000/admin.html
+
+## 📖 Documentation
+
+Detailed setup and configuration guides:
+
+- **[SETUP.md](./SETUP.md)** - Complete setup instructions with troubleshooting
+- **[FIREBASE-SETUP.md](./FIREBASE-SETUP.md)** - Firebase Firestore configuration
+
+## 📁 Project Structure
 
 ```
-mtg-brewers-cup/
-├── index.html              # Main submission page
-├── check-status.html       # Deck lookup page
-├── admin.html              # Admin dashboard
+brewerscup/
+├── index.html                    # Main deck submission page
+├── check-status.html             # Deck lookup and edit page
+├── admin.html                    # Admin dashboard
 ├── css/
-│   └── styles.css          # Main stylesheet
+│   └── styles.css               # Complete styling (dark theme, responsive)
 ├── js/
-│   ├── firebase-config.js  # Firebase configuration
-│   ├── deck-validator.js   # Deck parsing & validation logic
-│   ├── scryfall-api.js     # Scryfall API integration
-│   ├── main.js             # Main app logic (index.html)
-│   ├── check-status.js     # Check status logic
-│   └── admin.js            # Admin dashboard logic
-├── .gitignore              # Git ignore file
-└── README.md               # This file
+│   ├── firebase-config.example.js     # Firebase configuration template
+│   ├── firebase-config.js             # YOUR Firebase config (local only)
+│   ├── admin.js.example               # Admin template
+│   ├── admin.js                       # Admin dashboard (local only)
+│   ├── main.js                        # Main page logic (692 lines)
+│   ├── check-status.js                # Status lookup logic (609 lines)
+│   ├── deck-validator.js              # Card parsing & validation (518 lines)
+│   └── scryfall-api.js                # Scryfall API integration (145 lines)
+├── SETUP.md                      # Setup guide
+├── FIREBASE-SETUP.md             # Firebase configuration
+├── README.md                     # This file
+└── .gitignore                    # Excludes credentials
 ```
 
-## Setup Instructions
+## 🛠️ Technology Stack
 
-### Step 1: Create a Firebase Project
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | HTML5, CSS3 (dark theme), ES6+ JavaScript |
+| **Backend** | Firebase Firestore (cloud database) |
+| **APIs** | Scryfall (card data & legality) |
+| **Storage** | Firebase Firestore + Browser localStorage |
+| **Deployment** | GitHub Pages (needs local Firebase config) |
 
-1. Go to [Firebase Console](https://console.firebase.google.com)
-2. Click "Create a project"
-3. Enter project name: "MTG Brewers Cup"
-4. Disable Google Analytics (optional)
-5. Click "Create project" and wait for setup to complete
+## 🎯 How It Works
 
-### Step 2: Create a Web App in Firebase
+### Deck Submission Flow
+1. Player pastes deck list in text format (or Moxfield URL)
+2. App parses mainboard and sideboard
+3. Card names normalized via Scryfall fuzzy matching
+4. Validates against:
+   - Ban list (Firestore)
+   - Pauper legality (Scryfall)
+5. Generates memorable verification code (ADJECTIVE-NOUN)
+6. Stores in Firestore with validation results
 
-1. In Firebase Console, click the web icon (`</>`)
-2. Register app with name "MTG Brewers Cup Web"
-3. Copy the Firebase configuration object
-4. Click "Continue to console"
+### Deck Status Flow
+1. Player enters verification code
+2. App fetches deck from Firestore
+3. Shows current status, validation results, and Pauper legality
+4. Can edit mainboard/sideboard and revalidate
+5. Code saved to browser storage automatically
 
-### Step 3: Configure Firestore Database
+### Admin Dashboard
+1. Login with admin credentials
+2. View all submitted decks with stats
+3. Export deck as text file
+4. Manage ban list in real-time
+5. Delete player submissions if needed
 
-1. Go to **Firestore Database** in Firebase Console
-2. Click "Create database"
-3. Choose **Start in production mode**
-4. Select a location (closest to your users recommended)
-5. Click "Create"
+## 🔒 Security
 
-### Step 4: Create Firestore Collection
+### What's Protected
+- ✅ Admin credentials - NOT in git (.gitignore)
+- ✅ Firebase config - Kept in .gitignore on GitHub
+- ✅ Deck data - Only in Firestore, secured with rules
 
-1. In Firestore Database, click "Start collection"
-2. Collection ID: `decks`
-3. Click "Next"
-4. Click "Save" (collection will be created with first document)
+### Best Practices
+- Replace credentials in `js/firebase-config.js` with your own
+- Keep admin credentials secure
+- Use strong passwords for admin accounts
+- Security rules restrict access appropriately
 
-### Step 5: Set Up Firestore Security Rules
+### Files NOT in Git
+```
+js/firebase-config.js   # Your Firebase credentials
+js/admin.js             # Your admin credentials
+.example files are provided as templates
+```
 
-1. Go to **Firestore Database** → **Rules** tab
-2. Replace the rules with:
+## 📊 Data Storage
 
+### Firestore Collections
+
+**`/decks` collection**
 ```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Allow anyone to read decks
-    match /decks/{document=**} {
-      allow read;
-      allow create: if request.auth != null;
-      allow update, delete: if false;
-    }
+{
+  verificationCode: {
+    playerName: "John Doe",
+    mainboard: [
+      {name: "Island", quantity: 4},
+      {name: "Counterspell", quantity: 3}
+    ],
+    sideboard: [
+      {name: "Tormod's Crypt", quantity: 2}
+    ],
+    mainboardSize: 60,
+    sideboardSize: 15,
+    banlistValid: true,
+    pauperValid: true,
+    pauperIllegalCards: [],
+    submittedAt: timestamp,
+    lastModified: timestamp
   }
 }
 ```
 
-3. Click "Publish"
-
-### Step 6: Set Up Firebase Authentication
-
-1. Go to **Authentication** in Firebase Console
-2. Click "Get started"
-3. Enable **Google** as a sign-in provider
-4. Enable **Email/Password** authentication
-5. Save
-
-### Step 7: Add Firebase Config to App
-
-1. Open [js/firebase-config.js](js/firebase-config.js)
-2. Replace the `firebaseConfig` object with your project credentials:
-
+**`/admin/banlist` document**
 ```javascript
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef1234567890"
-};
+{
+  cards: ["Black Lotus", "Ancestral Recall"],
+  lastUpdated: timestamp,
+  reason: "Brewers Cup Format"
+}
 ```
 
-### Step 8: Configure Ban List (Optional)
+## 🌐 Browser Support
 
-Edit [js/deck-validator.js](js/deck-validator.js) and modify the `BAN_LIST` constant:
+- ✅ Chrome 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
+- ✅ Mobile browsers (responsive design)
 
-```javascript
-export const BAN_LIST = [
-  'Sol Ring',
-  'Mana Crypt',
-  'Dockside Extortionist',
-  // Add more cards as needed
-];
+## 📱 Responsive Design
+
+- Desktop: Full layout with side-by-side mainboard/sideboard
+- Tablet: Stacked layout, optimized touch targets
+- Mobile: Full responsive with touch-friendly inputs
+
+## 🔄 Recent Changes
+
+### v1.0 Features
+- ✅ Deck submission with mainboard/sideboard separation
+- ✅ Pauper legality validation via Scryfall API
+- ✅ Ban list management (Firestore backend)
+- ✅ Admin dashboard with player management
+- ✅ Deck export as text files
+- ✅ Browser storage for code history with auto-copy
+- ✅ Mobile responsive design
+- ✅ 9 production commits
+
+## ⚙️ Configuration
+
+### Local Development
+Currently requires manual configuration:
+1. Copy templates: `js/firebase-config.example.js` → `js/firebase-config.js`
+2. Add your Firebase credentials
+3. Optional: Edit admin credentials in `js/admin.js`
+
+## 🐛 Troubleshooting
+
+### Firebase Module Not Loading
 ```
-
-### Step 9: Deploy to GitHub Pages
-
-1. Create a new GitHub repository named `mtg-brewers-cup`
-2. Clone the repository locally
-3. Copy all project files into the repository
-4. Commit and push to GitHub
-
+Error: Failed to fetch firebase-config.js
+```
+**Solution**: Create the file from template:
 ```bash
-git add .
-git commit -m "Initial commit"
-git push origin main
+cp js/firebase-config.example.js js/firebase-config.js
+```
+Then add your Firebase credentials.
+
+### Cards Not Found
+Card names must match Scryfall exactly. Try:
+- Using Moxfield/Archidekt for card list (auto-formats names)
+- Checking spelling carefully
+- Including set abbreviation if ambiguous (e.g., "Island|ELD")
+
+### Permission Denied in Console
+- Check Firestore security rules are published
+- Verify Firebase credentials are correct
+- Test Firestore connection in DevTools
+
+See [SETUP.md](./SETUP.md#troubleshooting) for more troubleshooting.
+
+## 🚀 Deployment
+
+### Local Development
+```bash
+python -m http.server 8000
+# Or use: npx http-server, or VS Code Live Server
 ```
 
-5. Go to repository **Settings** → **Pages**
-6. Set **Source** to "Deploy from a branch"
-7. Select **Branch**: `main` and folder: `/ (root)`
-8. Click "Save"
-9. Wait a few minutes for deployment
-10. Your site will be available at: `https://yourusername.github.io/mtg-brewers-cup/`
+### GitHub Pages
+1. Ensure you're pushing to GitHub with credentials in .gitignore
+2. Enable GitHub Pages in repository Settings
+3. Site will be live at: `https://your-username.github.io/brewerscup/`
 
-## Usage
+**Note**: For GitHub Pages, Firebase config needs local setup. See [SETUP.md](./SETUP.md) for details.
 
-### For Players
+## 📝 Deck Format
 
-1. **Submit a Deck**:
-   - Go to the main page
-   - Enter your player name
-   - Paste a Moxfield/Archidekt URL OR text deck list
-   - Click "Preview Deck" to verify cards
-   - Click "Submit Deck" to save and get verification code
+### Text Format (Supported)
+```
+4x Island
+3x Counterspell
+2x Preordain
+...
 
-2. **Check Deck Status**:
-   - Go to "Check Deck" page
-   - Enter your verification code
-   - View your deck details
-
-### For Admins
-
-1. **Access Admin Dashboard**:
-   - Go to "Admin" page
-   - Sign in with your Firebase authentication email/password
-   - View all submissions with statistics
-
-2. **Manage Submissions**:
-   - Filter by player name or validation status
-   - Click "View" to see detailed deck information
-   - Track which cards are causing rejections
-
-## Common Issues & Troubleshooting
-
-### ❌ "Firebase config is invalid"
-**Solution**: Make sure you copied the entire `firebaseConfig` object from Firebase Console. Check that all quotes are correct.
-
-### ❌ "Scryfall API error" or "Card not found"
-**Solution**: This means the card name wasn't recognized. Scryfall uses exact Oracle names. Try:
-- Use the exact English card name
-- Check for typos
-- Paste the decklist from Moxfield/Archidekt instead of typing manually
-
-### ❌ "Firestore permission denied"
-**Solution**: Check your security rules. Make sure the rules above are correctly applied. Users need `auth != null` to create decks.
-
-### ❌ "QR code not generating"
-**Solution**: The QR code library loads from CDN. Check your internet connection. The verification code will still display even if QR code fails.
-
-### ❌ "Verification code not found"
-**Solution**: Make sure you're using the exact code (uppercase). Codes are case-sensitive.
-
-### ❌ Admin page won't load
-**Solution**: 
-- Make sure you've enabled Firebase Authentication
-- Try clearing browser cache
-- Check that you're signed in
-
-## Customization
-
-### Change Colors
-Edit [css/styles.css](css/styles.css) and modify CSS variables at the top:
-
-```css
-:root {
-  --primary: #6B46C1;        /* Main purple color */
-  --success: #10B981;         /* Green for valid */
-  --danger: #EF4444;          /* Red for invalid */
-  /* ... more variables */
-}
+Sideboard
+2x Tormod's Crypt
 ```
 
-### Change Ban List
-Edit [js/deck-validator.js](js/deck-validator.js):
+### Moxfield/Archidekt URL (Supported)
+Paste URL directly - app auto-extracts deck list
 
-```javascript
-export const BAN_LIST = [
-  'Card Name 1',
-  'Card Name 2',
-  // Add more...
-];
-```
+### Format Examples
+- `4 Island` ✅
+- `4x Island` ✅
+- `Island x4` ✅
+- `4 Island, 3 Counterspell` (comma-separated)
+- `Island (ELD)` (with set) ✅
+- `Card Name // Card Name` (split cards) ✅
 
-### Add/Remove Deck Sources
-Edit [js/deck-validator.js](js/deck-validator.js) to add support for other deck sites:
+## 🤝 Contributing
 
-```javascript
-export async function parseDeckFromURL(deckUrl) {
-  if (deckUrl.includes('your-site.com')) {
-    return parseYourSiteURL(deckUrl);
-  }
-  // ... existing code
-}
-```
+This is a competition event system. To contribute:
 
-### Customize UI Text
-Search the HTML files for the text you want to change and modify it directly.
+1. Report issues via GitHub Issues
+2. Fork the repository
+3. Create feature branch: `git checkout -b feature/your-feature`
+4. Commit changes: `git commit -m "Add your feature"`
+5. Push branch: `git push origin feature/your-feature`
+6. Open Pull Request
 
-## Security Considerations
+## 📄 License
 
-✅ **Safe by Default**
-- Firebase credentials are safe to expose in client-side code with proper security rules
-- Security rules prevent unauthorized writes to Firestore
-- Admin dashboard requires Firebase authentication
-- QR codes contain only the verification code (unique 8-char string)
+MIT License - See LICENSE file for details
 
-⚠️ **Important**
-- Never store sensitive data (credit cards, passwords, etc.) in submissions
-- Monitor your Firestore usage to avoid unexpected charges
-- Consider adding rate limiting if the service becomes popular
-- Review security rules regularly
-
-## Features Not Included (Future Enhancements)
-
-- Email notifications on submission
-- Batch deck upload
-- Deck statistics/analytics
-- Multiple tournament support
-- Payment processing
-- Custom security rules per tournament
-- Deck legality checker for specific formats
-
-## API Rate Limits
-
-- **Scryfall**: 20 requests/second (no authentication needed)
-- **Moxfield**: Generally permissive, check their terms
-- **Archidekt**: Generally permissive, check their terms
-- **Firebase**: Based on Firestore pricing tier
-
-## Browser Support
-
-- Chrome/Edge: Latest versions
-- Firefox: Latest versions
-- Safari: 14+
-- Mobile browsers: All modern versions
-
-## License
-
-This project is open source and available under the MIT License.
-
-## Support
+## 📧 Support
 
 For issues or questions:
-1. Check the troubleshooting section above
-2. Review Firebase documentation: https://firebase.google.com/docs
-3. Check Scryfall API docs: https://scryfall.com/docs/api
-4. Check GitHub Issues if applicable
+- Check [SETUP.md](./SETUP.md) for setup help
+- Review [FIREBASE-SETUP.md](./FIREBASE-SETUP.md) for Firebase config
+- Check browser console (F12) for error messages
+- Open a GitHub Issue
 
-## Credits
+## 🎮 Development
 
-- **Scryfall API**: Card data and normalization
-- **Moxfield & Archidekt**: Deck data sources
-- **Firebase**: Database and authentication
-- **QRCode.js**: QR code generation
+### Adding New Features
+
+1. **Add Firebase data** → Update Firestore structure in FIREBASE-SETUP.md
+2. **Add UI** → Update HTML file
+3. **Add Logic** → Create/update JS module
+4. **Add Styling** → Update css/styles.css
+5. **Test** → Run locally and verify
+6. **Commit** → Push to GitHub
+
+### Code Organization
+
+- **main.js** - Submission page logic
+- **check-status.js** - Status lookup logic
+- **deck-validator.js** - Card parsing and validation
+- **scryfall-api.js** - External API integration
+- **admin.js** - Admin dashboard logic
+
+## 📊 Version History
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.0 | Jan 2026 | Initial release with Pauper support |
+| 0.9 | Jan 2026 | Browser storage and export features |
+| 0.8 | Jan 2026 | Mainboard/sideboard separation |
+| 0.7 | Jan 2026 | Pauper legality validation |
+| 0.1 | Jan 2026 | Initial development |
 
 ---
 
-**Built with ❤️ for Magic: The Gathering players and organizers**
+**Questions?** See [SETUP.md](./SETUP.md) or [FIREBASE-SETUP.md](./FIREBASE-SETUP.md)  
+**Report Issues**: [GitHub Issues](https://github.com/DennHa/brewerscup/issues)  
+**Repository**: [github.com/DennHa/brewerscup](https://github.com/DennHa/brewerscup)
