@@ -10,11 +10,20 @@ const firebaseConfig = {
   appId: "1:744456728157:web:0b2ddb1db643fb4c6ee7b4"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+console.log('Firebase config module loading...');
 
-// Initialize Firestore
-const db = getFirestore(app);
+try {
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  console.log('Firebase initialized successfully');
 
-// Export for use in other modules
-export { app, db };
+  // Initialize Firestore
+  const db = getFirestore(app);
+  console.log('Firestore initialized successfully');
+
+  // Export for use in other modules
+  export { app, db };
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+  throw error;
+}
