@@ -14,25 +14,41 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Login form submission
+// Login button handler
 document.addEventListener('DOMContentLoaded', () => {
-  const loginForm = document.getElementById('admin-login-form');
-  if (loginForm) {
-    loginForm.addEventListener('submit', handleLogin);
+  const loginBtn = document.getElementById('admin-login-btn');
+  const logoutBtn = document.getElementById('logout-admin-btn');
+  
+  if (loginBtn) {
+    loginBtn.addEventListener('click', handleLogin);
+  }
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
   }
 });
 
-async function handleLogin(e) {
-  e.preventDefault();
+async function handleLogin() {
   const email = document.getElementById('admin-email').value;
   const password = document.getElementById('admin-password').value;
+  const errorDiv = document.getElementById('login-error');
+
+  if (!email || !password) {
+    if (errorDiv) {
+      errorDiv.textContent = 'Please enter email and password';
+      errorDiv.classList.remove('hidden');
+    }
+    return;
+  }
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
     console.log('Admin login successful');
   } catch (error) {
     console.error('Login failed:', error.message);
-    alert('Login failed: ' + error.message);
+    if (errorDiv) {
+      errorDiv.textContent = 'Login failed: ' + error.message;
+      errorDiv.classList.remove('hidden');
+    }
   }
 }
 
@@ -46,39 +62,23 @@ async function handleLogout() {
 }
 
 function showLoginForm() {
-  const container = document.getElementById('admin-container');
-  if (container) {
-    container.innerHTML = `
-      <div class="admin-login">
-        <h2>Admin Login</h2>
-        <form id="admin-login-form">
-          <input type="email" id="admin-email" placeholder="Email" required>
-          <input type="password" id="admin-password" placeholder="Password" required>
-          <button type="submit">Login</button>
-        </form>
-      </div>
-    `;
-    const loginForm = document.getElementById('admin-login-form');
-    if (loginForm) {
-      loginForm.addEventListener('submit', handleLogin);
-    }
-  }
+  const loginSection = document.getElementById('login-section');
+  const adminSection = document.getElementById('admin-section');
+  const logoutBtn = document.getElementById('logout-admin-btn');
+  
+  if (loginSection) loginSection.classList.remove('hidden');
+  if (adminSection) adminSection.classList.add('hidden');
+  if (logoutBtn) logoutBtn.style.display = 'none';
 }
 
 function showAdminDashboard() {
-  const container = document.getElementById('admin-container');
-  if (container) {
-    container.innerHTML = `
-      <div class="admin-dashboard">
-        <h2>Admin Dashboard</h2>
-        <p>Logged in as: ${currentUser.email}</p>
-        <button id="logout-btn">Logout</button>
-        <!-- Add your admin features here -->
-      </div>
-    `;
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', handleLogout);
-    }
-  }
+  const loginSection = document.getElementById('login-section');
+  const adminSection = document.getElementById('admin-section');
+  const logoutBtn = document.getElementById('logout-admin-btn');
+  
+  if (loginSection) loginSection.classList.add('hidden');
+  if (adminSection) adminSection.classList.remove('hidden');
+  if (logoutBtn) logoutBtn.style.display = 'block';
+  
+  console.log('Admin dashboard shown for user: ' + currentUser.email);
 }
