@@ -127,10 +127,19 @@ function setupTabs() {
   if (banlistTabBtn) {
     banlistTabBtn.addEventListener('click', () => {
       console.log('Ban list tab clicked');
-      if (playersTab) playersTab.classList.add('hidden');
-      if (banlistTab) banlistTab.classList.remove('hidden');
+      console.log('banlistTab element:', banlistTab);
+      if (playersTab) {
+        console.log('Hiding players tab');
+        playersTab.classList.add('hidden');
+      }
+      if (banlistTab) {
+        console.log('Showing ban list tab, current classes:', banlistTab.className);
+        banlistTab.classList.remove('hidden');
+        console.log('After removing hidden, classes:', banlistTab.className);
+      }
       if (playersTabBtn) playersTabBtn.classList.remove('active');
       banlistTabBtn.classList.add('active');
+      console.log('About to call loadBanList');
       loadBanList(); // Load ban list when tab is opened
     });
   }
@@ -149,11 +158,13 @@ async function loadPlayers() {
       players.push({ id: doc.id, ...doc.data() });
     });
     
-    console.log('Players loaded:', players.length);
+    console.log('Players loaded:', players.length, players);
     
     // Display players
     const playersList = document.getElementById('players-list');
     const playerCount = document.getElementById('player-count');
+    
+    console.log('Players list element:', playersList);
     
     if (players.length > 0) {
       playerCount.textContent = `Total: ${players.length} deck(s)`;
@@ -166,12 +177,34 @@ async function loadPlayers() {
               <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">${new Date(player.timestamp).toLocaleString()}</p>
             </div>
             <div style="text-align: right;">
-              <button class="btn btn-secondary" style="font-size: 0.85rem; margin-bottom: 0.5rem;" onclick="viewDeck(${JSON.stringify(player).replace(/"/g, '&quot;')})">View Deck</button>
-              <button class="btn btn-danger" style="font-size: 0.85rem; background: var(--danger); color: white;">Delete</button>
+              <button class="btn btn-secondary view-deck-btn" style="font-size: 0.85rem; margin-bottom: 0.5rem;" data-player-id="${idx}">View Deck</button>
+              <button class="btn btn-danger delete-deck-btn" style="font-size: 0.85rem; background: var(--danger); color: white;" data-player-id="${idx}">Delete</button>
             </div>
           </div>
         </div>
       `).join('');
+      
+      console.log('Setting up button event listeners...');
+      
+      // Set up view deck buttons
+      const viewDeckBtns = playersList.querySelectorAll('.view-deck-btn');
+      console.log('View deck buttons found:', viewDeckBtns.length);
+      viewDeckBtns.forEach((btn, idx) => {
+        btn.addEventListener('click', () => {
+          console.log('View deck button clicked for player:', idx);
+          viewDeck(players[idx]);
+        });
+      });
+      
+      // Set up delete buttons
+      const deleteBtns = playersList.querySelectorAll('.delete-deck-btn');
+      console.log('Delete buttons found:', deleteBtns.length);
+      deleteBtns.forEach((btn, idx) => {
+        btn.addEventListener('click', () => {
+          console.log('Delete button clicked for player:', idx);
+          deleteDeck(players[idx]);
+        });
+      });
       
       // Set up modal close button
       const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -197,42 +230,72 @@ async function loadPlayers() {
 // Load and display ban list
 async function loadBanList() {
   console.log('Loading ban list from Firestore...');
+  
   try {
-    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
-    const banlistCollection = collection(db, 'banlist');
-    const snapshot = await getDocs(banlistCollection);
+    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     
-    const bannedCards = [];
-    snapshot.forEach((doc) => {
-      bannedCards.push({ id: doc.id, ...doc.data() });
-    });
+    // Get the banlist document from admin collection
+    console.log('Getting document: admin/banlist');
+    const banlistDoc = doc(db, 'admin', 'banlist');
+    const docSnapshot = await getDoc(banlistDoc);
     
-    console.log('Ban list loaded:', bannedCards.length, bannedCards);
+    console.log('Document exists:', docSnapshot.exists());
+    
+    const banlistData = docSnapshot.data();
+    const cards = banlistData?.cards || [];
+    
+    console.log('Cards array length:', cards.length);
     
     const banlistCards = document.getElementById('banlist-cards');
+    console.log('banlistCards element found:', !!banlistCards);
+    
     if (banlistCards) {
-      if (bannedCards.length > 0) {
-        banlistCards.innerHTML = bannedCards.map(card => `
+      if (cards.length > 0) {
+        console.log('Building HTML for', cards.length, 'cards...');
+        
+        // Render first 50 cards to avoid rendering too many at once
+        const displayLimit = 50;
+        const displayCards = cards.slice(0, displayLimit);
+        
+        const html = displayCards.map((cardName, idx) => `
           <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm); border: 1px solid var(--border);">
-            <span style="font-weight: 600; color: var(--primary);">${card.cardName || card.name}</span>
-            <button class="btn btn-danger" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--danger); color: white;" onclick="removeFromBanList('${card.id}')">Remove</button>
+            <span style="font-weight: 600; color: var(--primary);">${cardName}</span>
+            <button class="btn btn-danger" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--danger); color: white;" onclick="removeFromBanList(${idx})">Remove</button>
           </div>
         `).join('');
+        
+        const message = cards.length > displayLimit ? `<p style="color: var(--text-muted); margin-bottom: var(--spacing-md);">Showing ${displayLimit} of ${cards.length} banned cards</p>` : '';
+        
+        const fullHtml = message + html;
+        console.log('HTML length:', fullHtml.length);
+        console.log('First 200 chars:', fullHtml.substring(0, 200));
+        
+        console.log('Setting innerHTML...');
+        banlistCards.innerHTML = fullHtml;
+        console.log('innerHTML set successfully');
+        console.log('Element now contains:', banlistCards.children.length, 'child elements');
       } else {
+        console.log('No banned cards found');
         banlistCards.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No banned cards yet.</p>';
       }
     } else {
-      console.error('banlist-cards element not found');
+      console.error('banlist-cards element not found!');
+      // Try to find it
+      const allDivs = document.querySelectorAll('[id*="banlist"]');
+      console.log('Found elements with "banlist" in id:', allDivs);
     }
     
     // Set up add card button
     const addCardBtn = document.getElementById('add-card-btn');
-    console.log('Add card button element:', addCardBtn);
+    console.log('addCardBtn element found:', !!addCardBtn);
     if (addCardBtn) {
+      console.log('Setting up add card button click handler');
       addCardBtn.onclick = addToBanList;
     }
   } catch (err) {
     console.error('Error loading ban list:', err);
+    console.error('Error code:', err.code);
+    console.error('Error message:', err.message);
     const banlistError = document.getElementById('banlist-error');
     if (banlistError) {
       banlistError.textContent = 'Error loading ban list: ' + err.message;
@@ -260,15 +323,15 @@ async function addToBanList() {
   }
   
   try {
-    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
-    const banlistCollection = collection(db, 'banlist');
-    const docRef = await addDoc(banlistCollection, {
-      cardName: cardName,
-      addedBy: currentUser.email,
-      timestamp: new Date().toISOString()
+    const { doc, updateDoc, arrayUnion } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const banlistDocRef = doc(db, 'admin', 'banlist');
+    
+    // Add card to the cards array
+    await updateDoc(banlistDocRef, {
+      cards: arrayUnion(cardName)
     });
     
-    console.log('Card added to ban list:', cardName, 'Doc ID:', docRef.id);
+    console.log('Card added to ban list:', cardName);
     if (banlistError) banlistError.classList.add('hidden');
     cardNameInput.value = '';
     await loadBanList(); // Reload the list
@@ -282,11 +345,24 @@ async function addToBanList() {
 }
 
 // Remove card from ban list
-async function removeFromBanList(cardId) {
-  console.log('Removing card from ban list:', cardId);
+async function removeFromBanList(cardIndex) {
+  console.log('Removing card at index:', cardIndex);
   try {
-    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
-    await deleteDoc(doc(db, 'banlist', cardId));
+    const { doc, getDoc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const banlistDocRef = doc(db, 'admin', 'banlist');
+    
+    // Get current array
+    const docSnapshot = await getDoc(banlistDocRef);
+    const cards = docSnapshot.data()?.cards || [];
+    
+    // Remove card at index
+    cards.splice(cardIndex, 1);
+    
+    // Update document with new array
+    await updateDoc(banlistDocRef, {
+      cards: cards
+    });
+    
     console.log('Card removed from ban list successfully');
     await loadBanList(); // Reload the list
   } catch (err) {
@@ -306,18 +382,32 @@ function viewDeck(playerData) {
   if (modalVerificationCode) modalVerificationCode.textContent = 'Code: ' + playerData.code;
   
   if (modalDeckContent) {
+    // Format mainboard list
+    let mainboardText = '';
+    if (playerData.mainboard && Array.isArray(playerData.mainboard)) {
+      mainboardText = playerData.mainboard.map(card => `${card.quantity}x ${card.name}`).join('\n');
+    } else if (playerData.decklist && Array.isArray(playerData.decklist)) {
+      mainboardText = playerData.decklist.map(card => `${card.quantity}x ${card.name}`).join('\n');
+    }
+    
+    // Format sideboard list
+    let sideboardText = '';
+    if (playerData.sideboard && Array.isArray(playerData.sideboard) && playerData.sideboard.length > 0) {
+      sideboardText = playerData.sideboard.map(card => `${card.quantity}x ${card.name}`).join('\n');
+    }
+    
     const deckHTML = `
       <div style="margin-bottom: var(--spacing-lg);">
-        <h3>Mainboard</h3>
+        <h3>Mainboard (${playerData.mainboardSize || 0} cards)</h3>
         <div style="background: var(--bg-input); padding: var(--spacing-md); border-radius: var(--radius-md); max-height: 300px; overflow-y: auto;">
-          <pre style="margin: 0; white-space: pre-wrap; word-break: break-word;">${playerData.mainboard || 'No mainboard data'}</pre>
+          <pre style="margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem;">${mainboardText || 'No mainboard data'}</pre>
         </div>
       </div>
-      ${playerData.sideboard ? `
+      ${sideboardText ? `
         <div>
-          <h3>Sideboard</h3>
+          <h3>Sideboard (${playerData.sideboardSize || 0} cards)</h3>
           <div style="background: var(--bg-input); padding: var(--spacing-md); border-radius: var(--radius-md); max-height: 300px; overflow-y: auto;">
-            <pre style="margin: 0; white-space: pre-wrap; word-break: break-word;">${playerData.sideboard}</pre>
+            <pre style="margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem;">${sideboardText}</pre>
           </div>
         </div>
       ` : ''}
@@ -327,5 +417,24 @@ function viewDeck(playerData) {
   
   if (modal) {
     modal.classList.remove('hidden');
+    console.log('Deck modal opened');
+  }
+}
+
+// Delete deck
+async function deleteDeck(playerData) {
+  console.log('Delete deck called for:', playerData.playerName);
+  if (!confirm(`Delete deck from ${playerData.playerName}?`)) {
+    return;
+  }
+  
+  try {
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    await deleteDoc(doc(db, 'decks', playerData.id));
+    console.log('Deck deleted successfully');
+    await loadPlayers(); // Reload the list
+  } catch (err) {
+    console.error('Error deleting deck:', err);
+    alert('Error deleting deck: ' + err.message);
   }
 }
