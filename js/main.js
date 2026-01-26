@@ -104,15 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // View saved codes button
-  const viewSavedCodesBtn = document.getElementById('view-saved-codes-btn');
-  if (viewSavedCodesBtn) {
-    viewSavedCodesBtn.addEventListener('click', () => {
-      console.log('🖱️ View saved codes button clicked');
-      showSavedCodes();
-    });
-  }
-  
   // Reset form button
   const resetFormBtn = document.getElementById('reset-form-btn');
   if (resetFormBtn) {
@@ -602,80 +593,7 @@ window.resetForm = function() {
   hideError();
 };
 
-/**
- * Show saved verification codes from browser storage
- */
-window.showSavedCodes = function() {
-  const modal = document.getElementById('saved-codes-modal');
-  const savedCodesList = document.getElementById('saved-codes-list');
-  
-  try {
-    // Try to get all saved submissions from localStorage
-    let submissions = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key.startsWith('lastDeckSubmission_')) {
-        try {
-          const data = JSON.parse(localStorage.getItem(key));
-          submissions.push(data);
-        } catch (e) {
-          console.warn('Could not parse stored submission:', e);
-        }
-      }
-    }
-    
-    // Also check for the most recent one
-    const recent = localStorage.getItem('lastDeckSubmission');
-    if (recent && recent.includes('{')) {
-      try {
-        const data = JSON.parse(recent);
-        if (!submissions.find(s => s.code === data.code)) {
-          submissions.push(data);
-        }
-      } catch (e) {
-        console.warn('Could not parse recent submission:', e);
-      }
-    }
-    
-    if (submissions.length > 0) {
-      // Sort by timestamp, most recent first
-      submissions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      
-      const codesHTML = submissions.map(sub => `
-        <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <p style="font-weight: 700; color: var(--primary);">${escapeHtml(sub.playerName)}</p>
-              <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: var(--spacing-sm);">${new Date(sub.timestamp).toLocaleString()}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="font-family: monospace; font-size: 1.2rem; letter-spacing: 2px; color: var(--primary); margin-bottom: var(--spacing-sm);">${sub.code}</p>
-              <button class="btn btn-secondary" onclick="navigator.clipboard.writeText('${sub.code}'); this.textContent='✓ Copied!'; setTimeout(() => this.textContent='Copy', 2000);" style="font-size: 0.85rem; padding: var(--spacing-sm) var(--spacing-md);">📋 Copy</button>
-            </div>
-          </div>
-        </div>
-      `).join('');
-      
-      savedCodesList.innerHTML = codesHTML;
-    } else {
-      savedCodesList.innerHTML = `
-        <p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">
-          No saved codes found. Submit a deck to save verification codes to your browser.
-        </p>
-      `;
-    }
-  } catch (err) {
-    console.error('Error loading saved codes:', err);
-    savedCodesList.innerHTML = `
-      <p style="color: var(--danger); text-align: center; padding: var(--spacing-lg);">
-        Error loading saved codes. Please try again.
-      </p>
-    `;
-  }
-  
-  modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-};
+
 
 /**
  * Close preview
