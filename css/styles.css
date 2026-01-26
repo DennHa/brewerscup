@@ -1264,29 +1264,47 @@ body {
   }
 
   .navbar {
-    padding: var(--spacing-md) 0;
+    padding: var(--spacing-sm) 0;
+  }
+
+  .navbar .container {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .navbar-brand {
+    width: 100%;
     margin-bottom: var(--spacing-md);
     gap: var(--spacing-sm);
   }
 
   .navbar-brand .logo {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .navbar-brand .brand-text h1 {
-    font-size: var(--font-size-lg);
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+  }
+
+  .navbar-brand .brand-text .subtitle {
+    font-size: 0.7rem;
   }
 
   .nav-links {
-    gap: var(--spacing-sm);
+    width: 100%;
+    gap: var(--spacing-xs);
+    justify-content: space-between;
   }
 
   .nav-link {
-    padding: var(--spacing-sm);
-    font-size: var(--font-size-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .form-container {
