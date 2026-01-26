@@ -346,3 +346,4 @@ For issues or questions:
 **Questions?** See [SETUP.md](./SETUP.md) or [FIREBASE-SETUP.md](./FIREBASE-SETUP.md)  
 **Report Issues**: [GitHub Issues](https://github.com/DennHa/brewerscup/issues)  
 **Repository**: [github.com/DennHa/brewerscup](https://github.com/DennHa/brewerscup)
+# Deployment test
