@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Brewers Cup 2026</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <span class="logo">🧙</span>
+        <div class="brand-text">
+          <h1>MTG Brewers Cup</h1>
+          <span class="subtitle">Deck Verification System</span>
+        </div>
+      </div>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link">Check Deck</a>
+        <a href="admin.html" class="nav-link active">Admin</a>
+        <button id="logout-admin-btn" class="nav-link" style="display: none; background: none; border: none; cursor: pointer; padding: 0;">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container">
+      <!-- Login Section -->
+      <section id="login-section" class="login-section">
+        <div class="section-header">
+          <h2>Admin Dashboard</h2>
+          <p>Sign in with your email to view player submissions</p>
+        </div>
+
+        <div class="login-container">
+          <div class="form-group">
+            <label for="admin-email">Admin Email</label>
+            <input type="email" id="admin-email" class="form-input" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label for="admin-password">Password</label>
+            <input type="password" id="admin-password" class="form-input" placeholder="Enter password">
+          </div>
+          <button class="btn btn-primary" id="admin-login-btn" style="width: 100%; margin-top: 1rem;">
+            Sign In
+          </button>
+          <div id="login-error" class="alert alert-error hidden" style="margin-top: 1rem;"></div>
+        </div>
+      </section>
+
+      <!-- Admin Content Section -->
+      <section id="admin-section" class="admin-section hidden">
+        <!-- Tabs for Players and Ban List -->
+        <div class="admin-tabs">
+          <button class="admin-tab-btn active" id="players-tab-btn">📊 Players</button>
+          <button class="admin-tab-btn" id="banlist-tab-btn">🚫 Ban List</button>
+        </div>
+
+        <!-- Players Tab Content -->
+        <div id="players-tab" class="admin-tab-content active">
+          <div class="section-header">
+            <h2>📊 Registered Players</h2>
+            <p id="player-count"></p>
+          </div>
+
+          <!-- Players List -->
+          <div id="players-list" class="players-list"></div>
+
+          <!-- Error Message -->
+          <div id="admin-error" class="alert alert-error hidden"></div>
+        </div>
+
+        <!-- Ban List Tab Content -->
+        <div id="banlist-tab" class="admin-tab-content hidden">
+          <div class="section-header">
+            <h2>🚫 Manage Ban List</h2>
+            <p>Add or remove banned cards for Pauper format</p>
+          </div>
+
+          <div class="banlist-container">
+            <!-- Add Card Form -->
+            <div class="banlist-form">
+              <h3>Add Card to Ban List</h3>
+              <div class="form-group">
+                <input 
+                  type="text" 
+                  id="new-banned-card" 
+                  class="form-input" 
+                  placeholder="Enter card name" 
+                >
+              </div>
+              <button class="btn btn-primary" id="add-card-btn">➕ Add Card</button>
+            </div>
+
+            <!-- Current Ban List -->
+            <div class="banlist-display">
+              <h3>Current Banned Cards</h3>
+              <div id="banlist-cards" class="banlist-cards"></div>
+              <div id="banlist-error" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Fullscreen Deck Modal -->
+  <div id="deck-modal" class="deck-modal hidden">
+    <div class="deck-modal-content">
+      <button class="modal-close-btn" id="modal-close-btn">✕</button>
+      <div class="modal-header">
+        <h2 id="modal-player-name"></h2>
+        <p id="modal-verification-code"></p>
+      </div>
+      <div id="modal-deck-content" class="modal-deck-content"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-confirmation-modal" class="deck-modal hidden">
+    <div class="deck-modal-content" style="max-width: 400px; margin: auto;">
+      <div class="modal-header">
+        <h2>Delete Player?</h2>
+      </div>
+      <div style="padding: var(--spacing-lg); text-align: center;">
+        <p id="delete-confirmation-text" style="color: var(--text-secondary); margin-bottom: var(--spacing-lg);"></p>
+        <p style="color: var(--danger); font-size: 0.9rem; margin-bottom: var(--spacing-lg);">This action cannot be undone.</p>
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button class="btn btn-secondary" id="cancel-delete-btn" style="flex: 1;">Cancel</button>
+          <button class="btn btn-danger" id="confirm-delete-btn" style="flex: 1; background: var(--danger); color: white;">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

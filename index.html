@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTG Brewers Cup - Deck Verification System</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <span class="logo">🧙</span>
+                <div class="brand-text">
+                    <h1>MTG Brewers Cup</h1>
+                    <span class="subtitle">Deck Verification System</span>
+                </div>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">Submit Deck</a>
+                <a href="check-status.html" class="nav-link">Check Deck</a>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="section-header">
+                <h2>Submit Your Deck for Verification</h2>
+                <p>Enter your deck via URL or paste the decklist text to validate it against the ban list</p>
+            </div>
+
+            <div class="form-container">
+                <!-- Player Info Section -->
+                <div class="form-section">
+                    <h3>👤 Player Information</h3>
+                    <div class="form-group">
+                        <label for="playerName">Player Name *</label>
+                        <input type="text" id="playerName" placeholder="Your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="playerEmail">Email</label>
+                        <input type="email" id="playerEmail" placeholder="your@email.com">
+                    </div>
+                </div>
+
+                <!-- Deck Input Section -->
+                <div class="form-section">
+                    <h3>📋 Deck Input</h3>
+                    
+                    <!-- Text Input -->
+                    <div id="text-input" class="input-tab-content active">
+                        <label for="deckText">Deck List *</label>
+                        <textarea id="deckText" placeholder="4x Card Name&#10;3x Another Card&#10;2x Yet Another Card&#10;..." rows="20"></textarea>
+                        <p class="help-text">
+                            Format: "4x Card Name" or "4 Card Name" - one per line
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                    <button id="preview-btn" class="btn btn-secondary">
+                        👁️ Preview Deck
+                    </button>
+                    <button id="submit-btn" class="btn btn-primary">
+                        ✓ Submit Deck
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div id="preview-section" class="preview-section hidden">
+                <div class="preview-header">
+                    <h3>📊 Deck Preview</h3>
+                    <button class="close-btn" id="close-preview-btn">✕</button>
+                </div>
+                <div id="preview-stats" class="preview-stats"></div>
+                <div id="preview-deck" class="deck-list"></div>
+                <div id="preview-warnings" class="warnings hidden"></div>
+                <div id="preview-unfound" class="unfound-cards hidden"></div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Processing your deck...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="alert alert-error hidden"></div>
+
+            <!-- Success Message -->
+            <div id="success-section" class="success-section hidden">
+                <div class="success-container">
+                    <div class="success-icon">✓</div>
+                    <h2>Deck Verified Successfully!</h2>
+                    <p class="success-subtitle">Your deck has been stored in our system</p>
+                    
+                    <div class="verification-code-box">
+                        <p class="label">Your Verification Code</p>
+                        <div class="code-display" id="codeDisplay">ABC12345</div>
+                        <button class="btn btn-secondary" id="copy-code-btn">📋 Copy</button>
+                        <p class="help-text" style="margin-top: 1rem; color: #6B7280;">
+                            Save this code to look up your deck status later. Share it with organizers if needed.
+                        </p>
+                    </div>
+
+                    <div id="success-deck-info" class="deck-info-box"></div>
+
+                    <div class="success-actions">
+                        <button class="btn btn-primary" id="reset-form-btn">
+                            ➕ Submit Another Deck
+                        </button>
+                        <a href="check-status.html" class="btn btn-secondary">
+                            🔍 Check Other Decks
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Progress Overlay -->
+        <div id="progress-overlay" class="progress-overlay hidden">
+            <div class="progress-content">
+                <div class="progress-header">
+                    <h3>Validating Your Deck</h3>
+                    <p class="progress-warning">⚠️ Please do not close or refresh this page</p>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+                <div class="progress-stats">
+                    <div class="progress-text">
+                        <span id="progress-count">0</span> / <span id="progress-total">0</span> cards checked
+                    </div>
+                    <div class="progress-current">
+                        <span id="progress-current-card">Initializing...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Removed external CDN for stability -->
+    
+    <!-- Firebase SDK and App Logic -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
