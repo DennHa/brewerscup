@@ -1,3 +1,6 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyCyGi3CcUWBPSyaSbAyCaTyNZNzpLWUqrU",
   authDomain: "brewerscup-77eaa.firebaseapp.com",
@@ -6,3 +9,12 @@ const firebaseConfig = {
   messagingSenderId: "744456728157",
   appId: "1:744456728157:web:0b2ddb1db643fb4c6ee7b4"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Initialize Firestore
+const db = getFirestore(app);
+
+// Export for use in other modules
+export { app, db };
