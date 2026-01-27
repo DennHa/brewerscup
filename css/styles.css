@@ -113,16 +113,19 @@
 
 html {
   scroll-behavior: smooth;
+  background: var(--color-bg-primary);
 }
 
 body {
   font-family: var(--font-family-sans);
+  background-color: var(--color-bg-primary);
   background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-tertiary) 50%, var(--color-bg-primary) 100%);
   background-attachment: fixed;
   color: var(--text-light);
   line-height: 1.6;
   position: relative;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 body::before {
