@@ -10,12 +10,23 @@
   <nav class="navbar">
     <div class="container">
       <div class="navbar-brand">
-        <span class="logo">🧙</span>
         <div class="brand-text">
-          <h1>MTG Brewers Cup</h1>
-          <span class="subtitle">Deck Verification System</span>
+          <h1>Brewer's Cup</h1>
         </div>
       </div>
+      <!-- Hamburger Menu -->
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <!-- Mobile Menu -->
+      <div class="nav-menu" id="nav-menu">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link active">Check Deck</a>
+        <a href="admin.html" class="nav-link">Admin</a>
+      </div>
+      <!-- Desktop Menu -->
       <div class="nav-links">
         <a href="index.html" class="nav-link">Submit Deck</a>
         <a href="check-status.html" class="nav-link active">Check Deck</a>
@@ -116,6 +127,35 @@
     </div>
   </div>
 
+  <script>
+    // Hamburger Menu Toggle for check-status.html
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('menu-toggle');
+      const navMenu = document.getElementById('nav-menu');
+      const navLinks = document.querySelectorAll('.nav-menu .nav-link');
+
+      if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+          menuToggle.classList.toggle('active');
+          navMenu.classList.toggle('active');
+        });
+      }
+
+      navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          if (menuToggle) menuToggle.classList.remove('active');
+          if (navMenu) navMenu.classList.remove('active');
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.navbar') && navMenu && navMenu.classList.contains('active')) {
+          menuToggle.classList.remove('active');
+          navMenu.classList.remove('active');
+        }
+      });
+    });
+  </script>
   <script type="module" src="js/check-status.js"></script>
 </body>
 </html>

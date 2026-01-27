@@ -20,11 +20,39 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
-// Login button handler
+// Hamburger Menu Toggle
 document.addEventListener('DOMContentLoaded', () => {
+  // Setup hamburger menu
+  const menuToggle = document.getElementById('menu-toggle');
+  const navMenu = document.getElementById('nav-menu');
+  const navLinks = document.querySelectorAll('.nav-menu .nav-link');
+
+  if (menuToggle) {
+    menuToggle.addEventListener('click', () => {
+      menuToggle.classList.toggle('active');
+      navMenu.classList.toggle('active');
+    });
+  }
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      if (menuToggle) menuToggle.classList.remove('active');
+      if (navMenu) navMenu.classList.remove('active');
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.navbar') && navMenu && navMenu.classList.contains('active')) {
+      menuToggle.classList.remove('active');
+      navMenu.classList.remove('active');
+    }
+  });
+
+  // Admin page specific setup
   console.log('Admin page DOMContentLoaded');
   const loginBtn = document.getElementById('admin-login-btn');
   const logoutBtn = document.getElementById('logout-admin-btn');
+  const logoutBtnMobile = document.getElementById('logout-admin-btn-mobile');
   
   console.log('Login button element:', loginBtn);
   console.log('Logout button element:', logoutBtn);
@@ -36,6 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', handleLogout);
     console.log('Logout button listener attached');
+  }
+  if (logoutBtnMobile) {
+    logoutBtnMobile.addEventListener('click', handleLogout);
   }
 });
 
@@ -93,10 +124,12 @@ function showAdminDashboard() {
   const loginSection = document.getElementById('login-section');
   const adminSection = document.getElementById('admin-section');
   const logoutBtn = document.getElementById('logout-admin-btn');
+  const logoutBtnMobile = document.getElementById('logout-admin-btn-mobile');
   
   if (loginSection) loginSection.classList.add('hidden');
   if (adminSection) adminSection.classList.remove('hidden');
   if (logoutBtn) logoutBtn.style.display = 'block';
+  if (logoutBtnMobile) logoutBtnMobile.style.display = 'block';
   
   console.log('Admin dashboard shown for user: ' + currentUser.email);
   

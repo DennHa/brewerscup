@@ -11,12 +11,23 @@
     <nav class="navbar">
         <div class="container">
             <div class="navbar-brand">
-                <span class="logo">🧙</span>
                 <div class="brand-text">
-                    <h1>MTG Brewers Cup</h1>
-                    <span class="subtitle">Deck Verification System</span>
+                    <h1>Brewer's Cup</h1>
                 </div>
             </div>
+            <!-- Hamburger Menu -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <!-- Mobile Menu -->
+            <div class="nav-menu" id="nav-menu">
+                <a href="index.html" class="nav-link active">Submit Deck</a>
+                <a href="check-status.html" class="nav-link">Check Deck</a>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </div>
+            <!-- Desktop Menu -->
             <div class="nav-links">
                 <a href="index.html" class="nav-link active">Submit Deck</a>
                 <a href="check-status.html" class="nav-link">Check Deck</a>
@@ -30,46 +41,37 @@
         <!-- Main Content -->
         <main class="main-content">
             <div class="section-header">
-                <h2>Submit Your Deck for Verification</h2>
-                <p>Enter your deck via URL or paste the decklist text to validate it against the ban list</p>
+                <h2>Submit Your Deck</h2>
             </div>
 
             <div class="form-container">
                 <!-- Player Info Section -->
-                <div class="form-section">
-                    <h3>👤 Player Information</h3>
-                    <div class="form-group">
-                        <label for="playerName">Player Name *</label>
-                        <input type="text" id="playerName" placeholder="Your name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="playerEmail">Email</label>
-                        <input type="email" id="playerEmail" placeholder="your@email.com">
-                    </div>
+                <div class="form-group">
+                    <label for="playerName">Your Name</label>
+                    <input type="text" id="playerName" placeholder="e.g., John Doe" required>
+                    <small>Used to identify your submission</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="playerEmail">Email <span style="opacity: 0.6;">(optional)</span></label>
+                    <input type="email" id="playerEmail" placeholder="your@email.com">
+                    <small>We'll use this to contact you about your deck</small>
                 </div>
 
                 <!-- Deck Input Section -->
-                <div class="form-section">
-                    <h3>📋 Deck Input</h3>
-                    
-                    <!-- Text Input -->
-                    <div id="text-input" class="input-tab-content active">
-                        <label for="deckText">Deck List *</label>
-                        <textarea id="deckText" placeholder="4x Card Name&#10;3x Another Card&#10;2x Yet Another Card&#10;&#10;Sideboard&#10;2x Sideboard Card&#10;1x Another Sideboard Card" rows="20"></textarea>
-                        <p class="help-text">
-                            Format: "4x Card Name" or "4 Card Name" - one per line<br>
-                            Optional: Add "Sideboard" on a new line to separate your sideboard cards
-                        </p>
-                    </div>
+                <div class="form-group">
+                    <label for="deckText">Paste Your Deck List</label>
+                    <textarea id="deckText" placeholder="4x Lightning Bolt&#10;3x Counterspell&#10;2x Cancel&#10;&#10;Sideboard&#10;2x Surgical Extraction" rows="16"></textarea>
+                    <small>Format: <strong>4x Card Name</strong> (one per line). Add "Sideboard" on a new line to separate sideboard cards.</small>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="form-actions">
                     <button id="preview-btn" class="btn btn-secondary">
-                        👁️ Preview Deck
+                        👁️ Preview
                     </button>
                     <button id="submit-btn" class="btn btn-primary">
-                        ✓ Submit Deck
+                        ✓ Submit
                     </button>
                 </div>
             </div>

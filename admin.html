@@ -10,17 +10,29 @@
   <nav class="navbar">
     <div class="container">
       <div class="navbar-brand">
-        <span class="logo">🧙</span>
         <div class="brand-text">
-          <h1>MTG Brewers Cup</h1>
-          <span class="subtitle">Deck Verification System</span>
+          <h1>Brewer's Cup</h1>
         </div>
       </div>
+      <!-- Hamburger Menu -->
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <!-- Mobile Menu -->
+      <div class="nav-menu" id="nav-menu">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link">Check Deck</a>
+        <a href="admin.html" class="nav-link active">Admin</a>
+        <button id="logout-admin-btn-mobile" class="nav-link" style="display: none; background: none; border: none; cursor: pointer; padding: 0; color: var(--text-light); font-weight: 500;">Logout</button>
+      </div>
+      <!-- Desktop Menu -->
       <div class="nav-links">
         <a href="index.html" class="nav-link">Submit Deck</a>
         <a href="check-status.html" class="nav-link">Check Deck</a>
         <a href="admin.html" class="nav-link active">Admin</a>
-        <button id="logout-admin-btn" class="nav-link" style="display: none; background: none; border: none; cursor: pointer; padding: 0;">Logout</button>
+        <button id="logout-admin-btn" class="nav-link" style="display: none; background: none; border: none; cursor: pointer; padding: var(--spacing-sm) var(--spacing-md);">Logout</button>
       </div>
     </div>
   </nav>
