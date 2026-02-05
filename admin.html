@@ -68,6 +68,7 @@
         <div class="admin-tabs">
           <button class="admin-tab-btn active" id="players-tab-btn">📊 Players</button>
           <button class="admin-tab-btn" id="banlist-tab-btn">🚫 Ban List</button>
+          <button class="admin-tab-btn" id="tournaments-tab-btn">🏆 Tournaments</button>
         </div>
 
         <!-- Players Tab Content -->
@@ -75,6 +76,14 @@
           <div class="section-header">
             <h2>📊 Registered Players</h2>
             <p id="player-count"></p>
+          </div>
+
+          <div style="display: flex; gap: var(--spacing-md); align-items: flex-end; margin-bottom: var(--spacing-lg);">
+            <div class="form-group" style="max-width: 320px; margin-bottom: 0;">
+              <label for="tournament-filter">Tournament</label>
+              <select id="tournament-filter" class="form-input"></select>
+            </div>
+            <button id="export-players-btn" class="btn btn-secondary" style="height: fit-content;">📥 Export All</button>
           </div>
 
           <!-- Players List -->
@@ -114,6 +123,35 @@
             </div>
           </div>
         </div>
+
+        <!-- Tournaments Tab Content -->
+        <div id="tournaments-tab" class="admin-tab-content hidden">
+          <div class="section-header">
+            <h2>🏆 Manage Tournaments</h2>
+            <p>Create a tournament and share its submission link</p>
+          </div>
+
+          <div class="banlist-container">
+            <div class="banlist-form">
+              <h3>Create Tournament</h3>
+              <div class="form-group">
+                <input
+                  type="text"
+                  id="new-tournament-name"
+                  class="form-input"
+                  placeholder="Tournament name"
+                >
+              </div>
+              <button class="btn btn-primary" id="create-tournament-btn">➕ Create</button>
+              <div id="tournament-create-status" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
+            </div>
+
+            <div class="banlist-display">
+              <h3>Existing Tournaments</h3>
+              <div id="tournaments-list" class="banlist-cards"></div>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   </main>
@@ -142,6 +180,27 @@
         <div style="display: flex; gap: var(--spacing-md);">
           <button class="btn btn-secondary" id="cancel-delete-btn" style="flex: 1;">Cancel</button>
           <button class="btn btn-danger" id="confirm-delete-btn" style="flex: 1; background: var(--danger); color: white;">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tournament Delete Confirmation Modal -->
+  <div id="tournament-delete-modal" class="deck-modal hidden">
+    <div class="deck-modal-content" style="max-width: 450px; margin: auto;">
+      <div class="modal-header">
+        <h2>Delete Tournament?</h2>
+      </div>
+      <div style="padding: var(--spacing-lg);">
+        <p id="tournament-delete-text" style="color: var(--text-secondary); margin-bottom: var(--spacing-md);"></p>
+        <p style="color: var(--danger); font-size: 0.9rem; margin-bottom: var(--spacing-lg);">⚠️ This will NOT delete player submissions, but the tournament entry will be removed.</p>
+        <div class="form-group" style="margin-bottom: var(--spacing-lg);">
+          <label for="tournament-delete-confirm">Type <strong>delete</strong> to confirm:</label>
+          <input type="text" id="tournament-delete-confirm" class="form-input" placeholder="delete">
+        </div>
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button class="btn btn-secondary" id="cancel-tournament-delete-btn" style="flex: 1;">Cancel</button>
+          <button class="btn btn-danger" id="confirm-tournament-delete-btn" style="flex: 1; background: var(--danger); color: white;" disabled>Delete</button>
         </div>
       </div>
     </div>

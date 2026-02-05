@@ -229,7 +229,12 @@ export function parseDecklistText(deckText) {
     
     if (match) {
       const quantity = parseInt(match[1], 10);
-      const cardName = match[2].trim();
+      let cardName = match[2].trim();
+      
+      // Remove edition information in brackets or parentheses
+      // Examples: "Lightning Bolt (A25)" → "Lightning Bolt"
+      //           "Island [MH2]" → "Island"
+      cardName = cardName.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
       
       // Skip category labels
       const labels = ['LANDS', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ARTIFACTS', 'ENCHANTMENTS', 'PLANESWALKERS'];

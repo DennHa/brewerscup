@@ -5,6 +5,10 @@ console.log('Admin.js loading...');
 
 const auth = getAuth();
 let currentUser = null;
+let tournaments = [];
+let tournamentMap = new Map();
+let allPlayers = [];
+let selectedTournamentId = 'all';
 
 console.log('Firebase Auth initialized:', auth);
 
@@ -53,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginBtn = document.getElementById('admin-login-btn');
   const logoutBtn = document.getElementById('logout-admin-btn');
   const logoutBtnMobile = document.getElementById('logout-admin-btn-mobile');
+  const createTournamentBtn = document.getElementById('create-tournament-btn');
+  const tournamentFilter = document.getElementById('tournament-filter');
+  const exportPlayersBtn = document.getElementById('export-players-btn');
   
   console.log('Login button element:', loginBtn);
   console.log('Logout button element:', logoutBtn);
@@ -67,6 +74,28 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (logoutBtnMobile) {
     logoutBtnMobile.addEventListener('click', handleLogout);
+  }
+  if (createTournamentBtn) {
+    createTournamentBtn.addEventListener('click', createTournament);
+  }
+  if (tournamentFilter) {
+    tournamentFilter.addEventListener('change', (e) => {
+      selectedTournamentId = e.target.value;
+      renderPlayers();
+    });
+  }
+  if (exportPlayersBtn) {
+    exportPlayersBtn.addEventListener('click', exportPlayersToText);
+  }
+
+  // Tournament delete modal buttons
+  const cancelTournamentDeleteBtn = document.getElementById('cancel-tournament-delete-btn');
+  const confirmTournamentDeleteBtn = document.getElementById('confirm-tournament-delete-btn');
+  if (cancelTournamentDeleteBtn) {
+    cancelTournamentDeleteBtn.addEventListener('click', hideTournamentDeleteModal);
+  }
+  if (confirmTournamentDeleteBtn) {
+    confirmTournamentDeleteBtn.addEventListener('click', confirmDeleteTournament);
   }
 });
 
@@ -135,17 +164,21 @@ function showAdminDashboard() {
   
   // Set up tab switching
   setupTabs();
-  
-  // Load players list
-  loadPlayers();
+
+  // Load tournaments, then players list
+  loadTournaments().then(() => {
+    loadPlayers();
+  });
 }
 
 // Setup tab switching
 function setupTabs() {
   const playersTabBtn = document.getElementById('players-tab-btn');
   const banlistTabBtn = document.getElementById('banlist-tab-btn');
+  const tournamentsTabBtn = document.getElementById('tournaments-tab-btn');
   const playersTab = document.getElementById('players-tab');
   const banlistTab = document.getElementById('banlist-tab');
+  const tournamentsTab = document.getElementById('tournaments-tab');
   
   console.log('Setup tabs - players btn:', playersTabBtn);
   console.log('Setup tabs - banlist btn:', banlistTabBtn);
@@ -162,6 +195,10 @@ function setupTabs() {
   if (banlistTab) {
     banlistTab.classList.add('hidden');
     banlistTab.classList.remove('active');
+  }
+  if (tournamentsTab) {
+    tournamentsTab.classList.add('hidden');
+    tournamentsTab.classList.remove('active');
   }
   
   if (playersTabBtn) {
@@ -191,10 +228,38 @@ function setupTabs() {
         banlistTab.classList.remove('hidden');
         banlistTab.classList.add('active');
       }
+      if (tournamentsTab) {
+        tournamentsTab.classList.add('hidden');
+        tournamentsTab.classList.remove('active');
+      }
       if (playersTabBtn) playersTabBtn.classList.remove('active');
       banlistTabBtn.classList.add('active');
+      if (tournamentsTabBtn) tournamentsTabBtn.classList.remove('active');
       
       loadBanList();
+    });
+  }
+
+  if (tournamentsTabBtn) {
+    tournamentsTabBtn.addEventListener('click', () => {
+      console.log('Tournaments tab clicked');
+      if (playersTab) {
+        playersTab.classList.add('hidden');
+        playersTab.classList.remove('active');
+      }
+      if (banlistTab) {
+        banlistTab.classList.add('hidden');
+        banlistTab.classList.remove('active');
+      }
+      if (tournamentsTab) {
+        tournamentsTab.classList.remove('hidden');
+        tournamentsTab.classList.add('active');
+      }
+      if (playersTabBtn) playersTabBtn.classList.remove('active');
+      if (banlistTabBtn) banlistTabBtn.classList.remove('active');
+      tournamentsTabBtn.classList.add('active');
+
+      renderTournamentsList();
     });
   }
 }
@@ -215,118 +280,413 @@ async function loadPlayers() {
     console.log('Players loaded:', players.length, players);
     console.log('🔍 DEBUG: Full player data array:', JSON.stringify(players, null, 2));
     
-    // Display players
-    const playersList = document.getElementById('players-list');
-    const playerCount = document.getElementById('player-count');
-    
-    console.log('Players list element:', playersList);
-    console.log('Player count element:', playerCount);
-    
-    if (players.length > 0) {
-      playerCount.textContent = `Total: ${players.length} deck(s)`;
-      const htmlContent = players.map((player, idx) => {
-        // Format timestamp - handle both Firestore timestamp objects and Date strings
-        let timeStr = 'Unknown';
-        if (player.timestamp) {
-          if (player.timestamp.seconds) {
-            // Firestore timestamp object
-            const date = new Date(player.timestamp.seconds * 1000);
-            timeStr = date.toLocaleString();
-          } else if (typeof player.timestamp === 'string') {
-            // ISO string
-            const date = new Date(player.timestamp);
-            timeStr = date.toLocaleString();
-          } else if (player.timestamp instanceof Date) {
-            timeStr = player.timestamp.toLocaleString();
-          }
-        }
-        
-        console.log(`🎴 CARD ${idx}: Player="${player.playerName}", Code="${player.verificationCode}", Status="${player.status}", Valid="${player.isValid}", TimeStr="${timeStr}"`);
-        
-        // Determine status icons
-        const statusIcon = player.status === 'approved' ? '✅' : player.status === 'pending' ? '⏳' : '❌';
-        const validityIcon = player.isValid ? '✓' : '✗';
-        const banListIcon = player.banListValid ? '✓' : '✗';
-        
-        return `
-          <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-              <div>
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
-                  <p style="font-weight: 700; color: var(--primary);">${player.playerName || 'Unknown'}</p>
-                  <span style="font-size: 1rem;" title="Status: ${player.status}">${statusIcon}</span>
-                  <span style="font-size: 0.8rem; color: ${player.isValid ? 'var(--success)' : 'var(--danger)'};" title="Deck Valid: ${player.isValid}">Legal ${validityIcon}</span>
-                  <span style="font-size: 0.8rem; color: ${player.banListValid ? 'var(--success)' : 'var(--danger)'};" title="Ban List Valid: ${player.banListValid}">Banlist ${banListIcon}</span>
-                </div>
-                <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">📋 Code: <strong>${player.verificationCode || 'N/A'}</strong></p>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">📅 ${timeStr}</p>
-              </div>
-              <div style="text-align: right;">
-                <button class="btn btn-secondary view-deck-btn" style="font-size: 0.85rem; margin-bottom: 0.5rem;" data-player-id="${idx}">View Deck</button>
-                <button class="btn btn-danger delete-deck-btn" style="font-size: 0.85rem; background: var(--danger); color: white;" data-player-id="${idx}">Delete</button>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      
-      console.log('📝 GENERATED HTML:', htmlContent);
-      console.log('📝 HTML LENGTH:', htmlContent.length);
-      console.log('🎯 About to set innerHTML on element:', playersList);
-      console.log('🎯 playersList is null?', playersList === null);
-      console.log('🎯 playersList classList:', playersList?.classList);
-      
-      playersList.innerHTML = htmlContent;
-      
-      console.log('✅ HTML set to playersList. Current innerHTML length:', playersList.innerHTML.length);
-      console.log('✅ Current playersList content:', playersList.innerHTML.substring(0, 200), '...');
-      
-      // Double check - query the DOM directly for the cards
-      const cardsInDOM = document.querySelectorAll('.players-list div[style*="background"]');
-      console.log('🔍 Cards found in DOM after setting innerHTML:', cardsInDOM.length);
-      cardsInDOM.forEach((card, i) => {
-        console.log(`  Card ${i} text content:`, card.textContent.substring(0, 100));
-      });
-      
-      console.log('Setting up button event listeners...');
-      
-      // Set up view deck buttons
-      const viewDeckBtns = playersList.querySelectorAll('.view-deck-btn');
-      console.log('View deck buttons found:', viewDeckBtns.length);
-      viewDeckBtns.forEach((btn, idx) => {
-        btn.addEventListener('click', () => {
-          console.log('View deck button clicked for player:', idx);
-          viewDeck(players[idx]);
-        });
-      });
-      
-      // Set up delete buttons
-      const deleteBtns = playersList.querySelectorAll('.delete-deck-btn');
-      console.log('Delete buttons found:', deleteBtns.length);
-      deleteBtns.forEach((btn, idx) => {
-        btn.addEventListener('click', () => {
-          console.log('Delete button clicked for player:', idx);
-          deleteDeck(players[idx]);
-        });
-      });
-      
-      // Set up modal close button
-      const modalCloseBtn = document.getElementById('modal-close-btn');
-      if (modalCloseBtn) {
-        modalCloseBtn.onclick = () => {
-          const modal = document.getElementById('deck-modal');
-          if (modal) modal.classList.add('hidden');
-        };
-      }
-    } else {
-      playerCount.textContent = 'No submissions yet';
-      playersList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No player submissions found.</p>';
-    }
+    allPlayers = players;
+    renderPlayers();
   } catch (err) {
     console.error('Error loading players:', err);
     const playersList = document.getElementById('players-list');
     if (playersList) {
       playersList.innerHTML = `<p style="color: var(--danger);">Error loading players: ${err.message}</p>`;
+    }
+  }
+}
+
+function getTournamentLabel(player) {
+  const tournamentId = player.tournamentId || 'default';
+  return tournamentMap.get(tournamentId) || (tournamentId === 'default' ? 'Default' : tournamentId);
+}
+
+function renderPlayers() {
+  const playersList = document.getElementById('players-list');
+  const playerCount = document.getElementById('player-count');
+
+  if (!playersList || !playerCount) return;
+
+  const filteredPlayers = selectedTournamentId === 'all'
+    ? allPlayers
+    : allPlayers.filter(player => (player.tournamentId || 'default') === selectedTournamentId);
+
+  // Sort by submission time (oldest first)
+  filteredPlayers.sort((a, b) => {
+    const timeA = a.timestamp?.seconds || 0;
+    const timeB = b.timestamp?.seconds || 0;
+    return timeA - timeB;
+  });
+
+  // Sort by submission time (oldest first)
+  filteredPlayers.sort((a, b) => {
+    const timeA = a.timestamp?.seconds || 0;
+    const timeB = b.timestamp?.seconds || 0;
+    return timeA - timeB;
+  });
+
+  if (filteredPlayers.length === 0) {
+    playerCount.textContent = selectedTournamentId === 'all'
+      ? 'No submissions yet'
+      : 'No submissions for this tournament';
+    playersList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: var(--spacing-lg);">No player submissions found.</p>';
+    return;
+  }
+
+  playerCount.textContent = `Total: ${filteredPlayers.length} deck(s)`;
+
+  const htmlContent = filteredPlayers.map((player, idx) => {
+    // Format timestamp - handle both Firestore timestamp objects and Date strings
+    let timeStr = 'Unknown';
+    if (player.timestamp) {
+      if (player.timestamp.seconds) {
+        const date = new Date(player.timestamp.seconds * 1000);
+        timeStr = date.toLocaleString();
+      } else if (typeof player.timestamp === 'string') {
+        const date = new Date(player.timestamp);
+        timeStr = date.toLocaleString();
+      } else if (player.timestamp instanceof Date) {
+        timeStr = player.timestamp.toLocaleString();
+      }
+    }
+
+    const statusIcon = player.status === 'approved' ? '✅' : player.status === 'pending' ? '⏳' : '❌';
+    const validityIcon = player.isValid ? '✓' : '✗';
+    const banListIcon = player.banListValid ? '✓' : '✗';
+    const tournamentLabel = getTournamentLabel(player);
+
+    return `
+      <div style="background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+              <p style="font-weight: 700; color: var(--primary);">${player.playerName || 'Unknown'}</p>
+              <span style="font-size: 1rem;" title="Status: ${player.status}">${statusIcon}</span>
+              <span style="font-size: 0.8rem; color: ${player.isValid ? 'var(--success)' : 'var(--danger)'};" title="Deck Valid: ${player.isValid}">Legal ${validityIcon}</span>
+              <span style="font-size: 0.8rem; color: ${player.banListValid ? 'var(--success)' : 'var(--danger)'};" title="Ban List Valid: ${player.banListValid}">Banlist ${banListIcon}</span>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">🏷️ Tournament: <strong>${tournamentLabel}</strong></p>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">📋 Code: <strong>${player.verificationCode || 'N/A'}</strong></p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">📅 ${timeStr}</p>
+          </div>
+          <div style="text-align: right;">
+            <button class="btn btn-secondary view-deck-btn" style="font-size: 0.85rem; margin-bottom: 0.5rem;" data-player-id="${idx}">View Deck</button>
+            <button class="btn btn-danger delete-deck-btn" style="font-size: 0.85rem; background: var(--danger); color: white;" data-player-id="${idx}">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  playersList.innerHTML = htmlContent;
+
+  const viewDeckBtns = playersList.querySelectorAll('.view-deck-btn');
+  viewDeckBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      viewDeck(filteredPlayers[idx]);
+    });
+  });
+
+  const deleteBtns = playersList.querySelectorAll('.delete-deck-btn');
+  deleteBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      deleteDeck(filteredPlayers[idx]);
+    });
+  });
+
+  const modalCloseBtn = document.getElementById('modal-close-btn');
+  if (modalCloseBtn) {
+    modalCloseBtn.onclick = () => {
+      const modal = document.getElementById('deck-modal');
+      if (modal) modal.classList.add('hidden');
+    };
+  }
+}
+
+async function loadTournaments() {
+  try {
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const tournamentsCollection = collection(db, 'tournaments');
+    const snapshot = await getDocs(tournamentsCollection);
+
+    tournaments = [];
+    tournamentMap = new Map();
+
+    tournaments.push({ id: 'default', name: 'Default' });
+    tournamentMap.set('default', 'Default');
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      tournaments.push({ id: doc.id, ...data });
+      tournamentMap.set(doc.id, data.name || doc.id);
+    });
+
+    renderTournamentFilter();
+    renderTournamentsList();
+  } catch (error) {
+    console.error('Error loading tournaments:', error);
+  }
+}
+
+function renderTournamentFilter() {
+  const tournamentFilter = document.getElementById('tournament-filter');
+  if (!tournamentFilter) return;
+
+  const options = [
+    { id: 'all', name: 'All tournaments' },
+    ...tournaments
+  ];
+
+  tournamentFilter.innerHTML = options.map(option => (
+    `<option value="${option.id}">${option.name}</option>`
+  )).join('');
+
+  tournamentFilter.value = selectedTournamentId;
+}
+
+function getBaseUrl() {
+  const path = window.location.pathname.replace(/\/admin\.html.*$/, '/');
+  return `${window.location.origin}${path}`;
+}
+
+function renderTournamentsList() {
+  const listEl = document.getElementById('tournaments-list');
+  if (!listEl) return;
+
+  const filtered = tournaments.filter(t => t.id !== 'default');
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<p style="color: var(--text-muted);">No tournaments created yet.</p>';
+    return;
+  }
+
+  const baseUrl = getBaseUrl();
+  listEl.innerHTML = filtered.map((tournament, idx) => {
+    // Use query parameter format for compatibility with local dev servers
+    const link = `${baseUrl}index.html?t=${encodeURIComponent(tournament.id)}`;
+    return `
+      <div style="padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <div style="flex: 1;">
+          <div style="font-weight: 600;">${tournament.name || tournament.id}</div>
+          <div style="font-size: 0.85rem; color: var(--text-muted);">
+            <a href="${link}" target="_blank" style="color: var(--primary);">${link}</a>
+          </div>
+        </div>
+        <button class="btn btn-danger delete-tournament-btn" data-tournament-idx="${idx}" style="font-size: 0.85rem; background: var(--danger); color: white; padding: 0.4rem 0.8rem;">🗑️ Delete</button>
+      </div>
+    `;
+  }).join('');
+
+  // Attach delete button listeners
+  const deleteBtns = listEl.querySelectorAll('.delete-tournament-btn');
+  deleteBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.tournamentIdx);
+      showTournamentDeleteModal(filtered[idx]);
+    });
+  });
+}
+
+function exportPlayersToText() {
+  const filteredPlayers = selectedTournamentId === 'all'
+    ? allPlayers
+    : allPlayers.filter(player => (player.tournamentId || 'default') === selectedTournamentId);
+
+  // Sort by submission time (oldest first)
+  filteredPlayers.sort((a, b) => {
+    const timeA = a.timestamp?.seconds || 0;
+    const timeB = b.timestamp?.seconds || 0;
+    return timeA - timeB;
+  });
+
+  if (filteredPlayers.length === 0) {
+    alert('No players to export');
+    return;
+  }
+
+  let text = '';
+  const tournamentName = selectedTournamentId === 'all' 
+    ? 'All Tournaments'
+    : tournamentMap.get(selectedTournamentId) || selectedTournamentId;
+
+  text += `Brewers Cup - ${tournamentName}\n`;
+  text += `Exported: ${new Date().toLocaleString()}\n`;
+  text += `Total Players: ${filteredPlayers.length}\n`;
+  text += `${'='.repeat(80)}\n\n`;
+
+  filteredPlayers.forEach((player, idx) => {
+    text += `${idx + 1}. ${player.playerName || 'Unknown'}\n`;
+    text += `   Code: ${player.verificationCode || 'N/A'}\n`;
+    text += `   Email: ${player.email || 'Not provided'}\n`;
+    text += `   Tournament: ${getTournamentLabel(player)}\n`;
+    text += `   Valid: ${player.isValid ? 'Yes' : 'No'} | Ban List: ${player.banListValid ? 'Yes' : 'No'} | Pauper Legal: ${player.pauperValid ? 'Yes' : 'No'}\n`;
+    
+    if (player.timestamp) {
+      let timeStr = 'Unknown';
+      if (player.timestamp.seconds) {
+        const date = new Date(player.timestamp.seconds * 1000);
+        timeStr = date.toLocaleString();
+      }
+      text += `   Submitted: ${timeStr}\n`;
+    }
+
+    // Mainboard
+    if (player.mainboard && player.mainboard.length > 0) {
+      text += `\n   MAINBOARD (${player.mainboardSize || 0} cards):\n`;
+      player.mainboard.forEach(card => {
+        text += `   ${card.quantity}x ${card.name}\n`;
+      });
+    }
+
+    // Sideboard
+    if (player.sideboard && player.sideboard.length > 0) {
+      text += `\n   SIDEBOARD (${player.sideboardSize || 0} cards):\n`;
+      player.sideboard.forEach(card => {
+        text += `   ${card.quantity}x ${card.name}\n`;
+      });
+    }
+
+    // Banned/Illegal cards warnings
+    if (player.bannedCards && player.bannedCards.length > 0) {
+      text += `\n   ⚠️ BANNED CARDS: ${player.bannedCards.map(c => c.name).join(', ')}\n`;
+    }
+    if (player.pauperIllegalCards && player.pauperIllegalCards.length > 0) {
+      text += `   ⚠️ PAUPER ILLEGAL: ${player.pauperIllegalCards.join(', ')}\n`;
+    }
+
+    text += `\n${'-'.repeat(80)}\n\n`;
+  });
+
+  // Create download
+  const blob = new Blob([text], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const filename = `brewers-cup-${selectedTournamentId}-${new Date().toISOString().split('T')[0]}.txt`;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+let tournamentToDelete = null;
+
+function showTournamentDeleteModal(tournament) {
+  tournamentToDelete = tournament;
+  const modal = document.getElementById('tournament-delete-modal');
+  const textEl = document.getElementById('tournament-delete-text');
+  const confirmInput = document.getElementById('tournament-delete-confirm');
+  const confirmBtn = document.getElementById('confirm-tournament-delete-btn');
+
+  if (textEl) {
+    textEl.textContent = `Are you sure you want to delete "${tournament.name || tournament.id}"?`;
+  }
+  if (confirmInput) {
+    confirmInput.value = '';
+    confirmInput.oninput = () => {
+      if (confirmBtn) {
+        confirmBtn.disabled = confirmInput.value.toLowerCase() !== 'delete';
+      }
+    };
+  }
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+  }
+
+  if (modal) modal.classList.remove('hidden');
+}
+
+function hideTournamentDeleteModal() {
+  const modal = document.getElementById('tournament-delete-modal');
+  if (modal) modal.classList.add('hidden');
+  tournamentToDelete = null;
+}
+
+async function confirmDeleteTournament() {
+  if (!tournamentToDelete) return;
+
+  const confirmInput = document.getElementById('tournament-delete-confirm');
+  if (confirmInput?.value.toLowerCase() !== 'delete') {
+    alert('Please type "delete" to confirm.');
+    return;
+  }
+
+  try {
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const tournamentRef = doc(db, 'tournaments', tournamentToDelete.id);
+    await deleteDoc(tournamentRef);
+
+    hideTournamentDeleteModal();
+    await loadTournaments();
+    renderPlayers();
+  } catch (error) {
+    console.error('Error deleting tournament:', error);
+    alert(`Failed to delete tournament: ${error.message}`);
+  }
+}
+
+function slugifyTournamentName(name) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+async function createTournament() {
+  const nameInput = document.getElementById('new-tournament-name');
+  const statusEl = document.getElementById('tournament-create-status');
+  if (!nameInput) return;
+
+  const name = nameInput.value.trim();
+  if (!name) {
+    if (statusEl) {
+      statusEl.textContent = 'Please enter a tournament name.';
+      statusEl.classList.add('alert-error');
+      statusEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  const slug = slugifyTournamentName(name);
+  if (!slug) {
+    if (statusEl) {
+      statusEl.textContent = 'Tournament name is not valid for a URL.';
+      statusEl.classList.add('alert-error');
+      statusEl.classList.remove('hidden');
+    }
+    return;
+  }
+
+  try {
+    const { doc, getDoc, setDoc, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const tournamentRef = doc(db, 'tournaments', slug);
+    const existing = await getDoc(tournamentRef);
+    if (existing.exists()) {
+      if (statusEl) {
+        statusEl.textContent = 'A tournament with this name already exists.';
+        statusEl.classList.add('alert-error');
+        statusEl.classList.remove('hidden');
+      }
+      return;
+    }
+
+    await setDoc(tournamentRef, {
+      name,
+      slug,
+      createdAt: serverTimestamp()
+    });
+
+    if (statusEl) {
+      statusEl.textContent = 'Tournament created successfully.';
+      statusEl.classList.remove('hidden');
+      statusEl.classList.remove('alert-error');
+    }
+
+    nameInput.value = '';
+    await loadTournaments();
+    renderPlayers();
+  } catch (error) {
+    console.error('Error creating tournament:', error);
+    if (statusEl) {
+      statusEl.textContent = `Failed to create tournament: ${error.message}`;
+      statusEl.classList.add('alert-error');
+      statusEl.classList.remove('hidden');
     }
   }
 }

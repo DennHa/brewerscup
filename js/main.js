@@ -3,7 +3,7 @@
 // Handles the main index.html page for deck submission
 
 import { db } from './firebase-config.js';
-import { collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 import {
   parseDecklistText,
   parseDeckFromURL,
@@ -62,6 +62,8 @@ let currentDeck = null;
 let currentMainboard = null;
 let currentSideboard = null;
 let currentValidation = null;
+let currentTournamentId = null;
+let currentTournamentName = null;
 
 /**
  * Show progress overlay
@@ -97,6 +99,8 @@ function updateProgressBar(current, total, currentCard = '') {
  */
 document.addEventListener('DOMContentLoaded', () => {
   console.log('📄 DOMContentLoaded - setting up event listeners');
+
+  initTournamentContext();
   
   // Preview button
   const previewBtn = document.getElementById('preview-btn');
@@ -143,6 +147,46 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+function getTournamentSlugFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const querySlug = params.get('t');
+  if (querySlug) return querySlug.trim();
+
+  const path = window.location.pathname;
+  const match = path.match(/\/e\/([^\/]+)/);
+  if (match && match[1]) {
+    const slug = match[1].replace(/\.html$/, '').trim();
+    if (slug && slug !== 'index') return decodeURIComponent(slug);
+  }
+
+  return null;
+}
+
+async function initTournamentContext() {
+  const slug = getTournamentSlugFromUrl();
+  const tournamentNameEl = document.getElementById('tournament-name');
+
+  if (!slug) return;
+
+  currentTournamentId = slug;
+  currentTournamentName = slug;
+
+  try {
+    const tournamentDoc = await getDoc(doc(db, 'tournaments', slug));
+    if (tournamentDoc.exists()) {
+      const data = tournamentDoc.data();
+      currentTournamentName = data.name || slug;
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to load tournament info:', error.message);
+  }
+
+  if (tournamentNameEl) {
+    tournamentNameEl.textContent = `Tournament: ${currentTournamentName}`;
+    tournamentNameEl.classList.remove('hidden');
+  }
+}
 
 /**
  * Preview the deck without saving
@@ -280,13 +324,15 @@ window.submitDeck = async function() {
     hideError();
 
     // Generate verification code
-    const verificationCode = generateVerificationCode();
+    const verificationCode = await generateVerificationCode();
     console.log(`🔐 Generated verification code: ${verificationCode}`);
 
     // Prepare deck data for Firestore
     const deckData = {
       playerName,
       email: playerEmail || null,
+      tournamentId: currentTournamentId || null,
+      tournamentName: currentTournamentName || null,
       decklist: currentDeck.map(card => ({
         name: card.normalizedName || card.originalName,
         originalName: card.originalName,
@@ -350,19 +396,29 @@ window.submitDeck = async function() {
  * @returns {Promise<Object>} Deck and any errors
  */
 async function getDeckInput() {
-  const deckText = document.getElementById('deckText').value.trim();
-  if (!deckText) {
-    showError('Please paste a deck list');
+  const mainboardText = document.getElementById('mainboardText').value.trim();
+  const sideboardText = document.getElementById('sideboardText').value.trim();
+  
+  if (!mainboardText) {
+    showError('Please paste a mainboard deck list');
     return { deck: null };
   }
 
-  const { mainboard, sideboard } = parseDecklistText(deckText);
+  // Parse mainboard (required)
+  const { mainboard } = parseDecklistText(mainboardText);
+  
+  // Parse sideboard (optional)
+  let sideboard = [];
+  if (sideboardText) {
+    const { mainboard: parsedSideboard } = parseDecklistText(sideboardText);
+    sideboard = parsedSideboard;
+  }
   
   // For Pauper, we typically only validate mainboard, but include sideboard in submission
   const allCards = [...mainboard];
   
   if (allCards.length === 0) {
-    showError('Could not parse any cards from the deck list');
+    showError('Could not parse any cards from the mainboard list');
     return { deck: null };
   }
   
@@ -555,7 +611,7 @@ function showSuccessPage(verificationCode, deckData) {
 /**
  * Generate a unique verification code
  */
-function generateVerificationCode() {
+async function generateVerificationCode() {
   // Pauper-themed words for memorable codes
   const adjectives = [
     'SWIFT', 'BOLD', 'DARK', 'STORM', 'WILD', 'KEEN', 'WISE', 'STRONG',
@@ -568,11 +624,45 @@ function generateVerificationCode() {
     'TOWER', 'FLAME', 'STORM', 'WAVE', 'WOLF', 'RAVEN', 'DRAGON',
     'PHOENIX', 'GRIFFIN', 'BEAST', 'SPIRIT', 'SHADOW', 'LIGHT', 'MAGE'
   ];
+
+  // Common Pauper format card names (shortened/simplified)
+  const cards = [
+    'BOLT', 'RITUAL', 'SPRITE', 'PROBE', 'BLAST', 'TRON', 'WALL',
+    'AUGUR', 'ANGLER', 'HAWK', 'SNAP', 'FLARE', 'PULSE', 'RELIC',
+    'HYDRO', 'CURSE', 'BONDER', 'ARMS', 'SKRED', 'PONDER', 'BRAINSTORM',
+    'PREORDAIN', 'DAZE', 'FORCE', 'HYMN', 'LOTUS', 'GUSH', 'PROBE'
+  ];
   
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  
-  return `${adjective}-${noun}`;
+  let code;
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  // Try to generate unique code
+  do {
+    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const card = cards[Math.floor(Math.random() * cards.length)];
+    
+    code = `${adjective}-${noun}-${card}`;
+    
+    // Check if code already exists in Firestore
+    const { query: fsQuery, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const q = fsQuery(
+      collection(db, 'decks'),
+      where('verificationCode', '==', code)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    if (querySnapshot.empty) {
+      // Code is unique
+      return code;
+    }
+    
+    attempts++;
+  } while (attempts < maxAttempts);
+
+  // Fallback: add timestamp suffix if collision after max attempts
+  return `${code}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
 }
 
 /**
@@ -612,7 +702,8 @@ window.downloadDeckList = function() {
 window.resetForm = function() {
   document.getElementById('playerName').value = '';
   document.getElementById('playerEmail').value = '';
-  document.getElementById('deckText').value = '';
+  document.getElementById('mainboardText').value = '';
+  document.getElementById('sideboardText').value = '';
   
   currentDeck = null;
   currentValidation = null;

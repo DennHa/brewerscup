@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MTG Brewers Cup - Deck Verification System</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>MTG Brewers Cup - Tournament Submission</title>
+    <link rel="stylesheet" href="../css/styles.css">
 </head>
 <body>
     <!-- Navigation -->
@@ -23,15 +23,15 @@
             </button>
             <!-- Mobile Menu -->
             <div class="nav-menu" id="nav-menu">
-                <a href="index.html" class="nav-link active">Submit Deck</a>
-                <a href="check-status.html" class="nav-link">Check Deck</a>
-                <a href="admin.html" class="nav-link">Admin</a>
+                <a href="../index.html" class="nav-link">Submit Deck</a>
+                <a href="../check-status.html" class="nav-link">Check Deck</a>
+                <a href="../admin.html" class="nav-link">Admin</a>
             </div>
             <!-- Desktop Menu -->
             <div class="nav-links">
-                <a href="index.html" class="nav-link active">Submit Deck</a>
-                <a href="check-status.html" class="nav-link">Check Deck</a>
-                <a href="admin.html" class="nav-link">Admin</a>
+                <a href="../index.html" class="nav-link">Submit Deck</a>
+                <a href="../check-status.html" class="nav-link">Check Deck</a>
+                <a href="../admin.html" class="nav-link">Admin</a>
             </div>
         </div>
     </nav>
@@ -48,9 +48,9 @@
             <div class="form-container">
                 <!-- Player Info Section -->
                 <div class="form-group">
-                    <label for="playerName">Your Discord/Nickname</label>
+                    <label for="playerName">Your Name</label>
                     <input type="text" id="playerName" placeholder="e.g., John Doe" required>
-                    <small>Used to identify your submission. We might publish this name online for statistics.</small>
+                    <small>Used to identify your submission</small>
                 </div>
 
                 <div class="form-group">
@@ -128,7 +128,7 @@
                         <button class="btn btn-primary" id="reset-form-btn">
                             ➕ Submit Another Deck
                         </button>
-                        <a href="check-status.html" class="btn btn-secondary">
+                        <a href="../check-status.html" class="btn btn-secondary">
                             🔍 Check Other Decks
                         </a>
                     </div>
@@ -157,12 +157,9 @@
             </div>
         </div>
 
-
     </div>
 
-    <!-- Removed external CDN for stability -->
-    
     <!-- Firebase SDK and App Logic -->
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="../js/main.js"></script>
 </body>
 </html>

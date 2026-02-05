@@ -504,6 +504,10 @@ body::before {
 .close-btn {
   background: none;
   border: none;
+.tournament-name {
+  color: var(--text-muted);
+  margin-top: var(--spacing-xs);
+}
   font-size: var(--font-size-xl);
   cursor: pointer;
   color: var(--text-muted);

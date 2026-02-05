@@ -86,6 +86,12 @@ function displayDeckResult(deckData) {
         <span class="detail-value">${escapeHtml(deckData.email)}</span>
       </div>
     ` : ''}
+    ${deckData.tournamentName || deckData.tournamentId ? `
+      <div class="detail-item">
+        <span class="detail-label">Tournament</span>
+        <span class="detail-value">${escapeHtml(deckData.tournamentName || deckData.tournamentId)}</span>
+      </div>
+    ` : ''}
     <div class="detail-item">
       <span class="detail-label">Submission Date</span>
       <span class="detail-value">${timestamp}</span>
