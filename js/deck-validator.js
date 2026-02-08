@@ -375,59 +375,99 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Get current ban list from Firebase or fallback to hardcoded list
+ * @param {string} tournamentId - Optional tournament ID to get tournament-specific ban list
  * @returns {Promise<Array>} Array of banned card names
  */
-export async function getBanList() {
+export async function getBanList(tournamentId = null) {
+  // Create cache key based on tournament
+  const cacheKey = tournamentId || 'default';
+  
   // Return cached version if still valid
-  if (banListCache && Date.now() - banListCacheTime < CACHE_DURATION) {
-    console.log('🚫 Using cached ban list');
-    return banListCache;
+  if (banListCache && Date.now() - banListCacheTime < CACHE_DURATION && banListCache.tournamentId === cacheKey) {
+    console.log(`🚫 Using cached ban list for ${cacheKey}`);
+    return banListCache.cards;
   }
 
   try {
-    console.log('🚫 Fetching ban list from Firebase');
-    const banListDoc = await getDoc(doc(db, 'admin', 'banlist'));
+    let banList = BAN_LIST;
     
-    if (banListDoc.exists()) {
-      const data = banListDoc.data();
-      banListCache = data.cards || BAN_LIST;
-      banListCacheTime = Date.now();
-      console.log('✅ Ban list loaded from Firebase:', banListCache.length, 'cards');
-      return banListCache;
+    if (tournamentId) {
+      // Try to get tournament-specific ban list
+      console.log(`🚫 Fetching ban list for tournament: ${tournamentId}`);
+      const tournamentDoc = await getDoc(doc(db, 'tournaments', tournamentId));
+      
+      if (tournamentDoc.exists()) {
+        const tournamentData = tournamentDoc.data();
+        banList = tournamentData.banList || BAN_LIST;
+        console.log(`✅ Tournament-specific ban list loaded: ${banList.length} cards`);
+      } else {
+        console.warn(`⚠️ Tournament ${tournamentId} not found, using default ban list`);
+      }
     } else {
-      console.warn('⚠️ Ban list not found in Firebase, using hardcoded list');
-      banListCache = BAN_LIST;
-      banListCacheTime = Date.now();
-      return banListCache;
+      // Get global ban list
+      console.log('🚫 Fetching global ban list from Firebase');
+      const banListDoc = await getDoc(doc(db, 'admin', 'banlist'));
+      
+      if (banListDoc.exists()) {
+        const data = banListDoc.data();
+        banList = data.cards || BAN_LIST;
+        console.log('✅ Global ban list loaded from Firebase:', banList.length, 'cards');
+      } else {
+        console.warn('⚠️ Global ban list not found in Firebase, using hardcoded list');
+      }
     }
+    
+    // Update cache
+    banListCache = {
+      tournamentId: cacheKey,
+      cards: banList
+    };
+    banListCacheTime = Date.now();
+    return banList;
+    
   } catch (error) {
     console.error('❌ Error fetching ban list from Firebase:', error);
     console.warn('⚠️ Falling back to hardcoded ban list');
-    banListCache = BAN_LIST;
-    return banListCache;
+    banListCache = {
+      tournamentId: cacheKey,
+      cards: BAN_LIST
+    };
+    return BAN_LIST;
   }
 }
 
 /**
  * Update the ban list in Firebase
  * @param {Array} newBanList - New list of banned cards
+ * @param {string} tournamentId - Optional tournament ID for tournament-specific ban list
  * @returns {Promise<void>}
  */
-export async function updateBanList(newBanList) {
-  console.log('🚫 Updating ban list to Firebase:', newBanList.length, 'cards');
+export async function updateBanList(newBanList, tournamentId = null) {
+  console.log(`🚫 Updating ban list to Firebase (${tournamentId || 'global'}):`, newBanList.length, 'cards');
   
   try {
-    await setDoc(doc(db, 'admin', 'banlist'), {
-      cards: newBanList,
-      updatedAt: new Date(),
-      count: newBanList.length
-    });
+    if (tournamentId) {
+      // Update tournament-specific ban list
+      const tournamentRef = doc(db, 'tournaments', tournamentId);
+      await setDoc(tournamentRef, {
+        banList: newBanList,
+        banListUpdatedAt: new Date()
+      }, { merge: true });
+      console.log(`✅ Tournament ${tournamentId} ban list updated successfully`);
+    } else {
+      // Update global ban list
+      await setDoc(doc(db, 'admin', 'banlist'), {
+        cards: newBanList,
+        updatedAt: new Date(),
+        count: newBanList.length
+      });
+      console.log('✅ Global ban list updated successfully in Firebase');
+    }
     
-    // Update cache
-    banListCache = newBanList;
-    banListCacheTime = Date.now();
+    // Clear cache
+    banListCache = null;
+    banListCacheTime = 0;
     
-    console.log('✅ Ban list updated successfully in Firebase');
   } catch (error) {
     console.error('❌ Error updating ban list in Firebase:', error);
     throw error;

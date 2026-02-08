@@ -114,11 +114,19 @@ function displayDeckResult(deckData) {
         </div>
       </div>
     ` : ''}
-    ${!deckData.pauperValid && deckData.pauperIllegalCards && deckData.pauperIllegalCards.length > 0 ? `
+    ${deckData.pauperCheckEnabled && !deckData.pauperValid && deckData.pauperIllegalCards && deckData.pauperIllegalCards.length > 0 ? `
       <div class="detail-item full-width">
         <span class="detail-label">Not Pauper Legal (Scryfall)</span>
         <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap; margin-top: var(--spacing-sm);">
           ${deckData.pauperIllegalCards.map(c => `<span class="badge" style="background: rgba(251, 191, 36, 0.2); color: var(--warning); padding: var(--spacing-sm) var(--spacing-md); border-radius: var(--radius-md); border: 1px solid var(--warning);">${c.quantity}x ${escapeHtml(c.name)} (${c.status})</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+    ${deckData.pauperCheckEnabled === false ? `
+      <div class="detail-item full-width">
+        <div style="background: rgba(157, 78, 221, 0.1); border-left: 4px solid var(--primary); padding: var(--spacing-md); border-radius: var(--radius-md);">
+          <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.25rem;">ℹ️ Pauper Check Disabled</div>
+          <div style="color: var(--text-muted); font-size: 0.85rem;">Pauper legality checking was disabled for this tournament.</div>
         </div>
       </div>
     ` : ''}

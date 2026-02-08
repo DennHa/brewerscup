@@ -66,6 +66,30 @@ let currentTournamentId = null;
 let currentTournamentName = null;
 
 /**
+ * Check if Pauper checking is enabled for a tournament
+ */
+async function isPauperCheckEnabled(tournamentId) {
+  try {
+    if (!tournamentId || tournamentId === 'default') {
+      // Check global setting
+      const banlistDoc = doc(db, 'admin', 'banlist');
+      const docSnapshot = await getDoc(banlistDoc);
+      const data = docSnapshot.data();
+      return data?.pauperCheckEnabled !== false; // Default to true if not set
+    } else {
+      // Check tournament-specific setting
+      const tournamentDoc = doc(db, 'tournaments', tournamentId);
+      const docSnapshot = await getDoc(tournamentDoc);
+      const data = docSnapshot.data();
+      return data?.pauperCheckEnabled !== false; // Default to true if not set
+    }
+  } catch (err) {
+    console.error('Error checking Pauper setting:', err);
+    return true; // Default to enabled on error
+  }
+}
+
+/**
  * Show progress overlay
  */
 function showProgressOverlay(total) {
@@ -244,13 +268,21 @@ window.previewDeck = async function() {
       return;
     }
 
-    // Validate against ban list
-    const banList = await getBanList();
+    // Validate against ban list (pass tournament ID if available)
+    const banList = await getBanList(currentTournamentId);
     const validation = validateAgainstBanlist(normalizedDeck, banList);
     
-    // Check Pauper legality
-    console.log('🎴 Checking Pauper legality...');
-    const pauperValidation = await validatePauperLegality(normalizedDeck);
+    // Check if Pauper checking is enabled for this tournament
+    const pauperCheckEnabled = await isPauperCheckEnabled(currentTournamentId);
+    console.log(`🎴 Pauper check enabled for this tournament: ${pauperCheckEnabled}`);
+    
+    let pauperValidation = { valid: true, illegalCards: [] };
+    if (pauperCheckEnabled) {
+      console.log('🎴 Checking Pauper legality...');
+      pauperValidation = await validatePauperLegality(normalizedDeck);
+    } else {
+      console.log('⏭️ Skipping Pauper legality check (disabled for this tournament)');
+    }
     
     const deckSize = calculateDeckSize(normalizedDeck);
     
@@ -258,7 +290,7 @@ window.previewDeck = async function() {
     if (!validation.valid) {
       console.log('🚫 Banned cards found:', validation.bannedCards);
     }
-    if (!pauperValidation.valid) {
+    if (pauperCheckEnabled && !pauperValidation.valid) {
       console.log('⚠️ Pauper illegal cards found:', pauperValidation.illegalCards);
     }
 
@@ -266,6 +298,7 @@ window.previewDeck = async function() {
     const combinedValidation = {
       banListValid: validation.valid,
       pauperValid: pauperValidation.valid,
+      pauperCheckEnabled: pauperCheckEnabled,
       overallValid: validation.valid && pauperValidation.valid,
       bannedCards: validation.bannedCards,
       illegalCards: pauperValidation.illegalCards
@@ -360,6 +393,7 @@ window.submitDeck = async function() {
       pauperIllegalCards: currentValidation.illegalCards,
       banListValid: currentValidation.banListValid,
       pauperValid: currentValidation.pauperValid,
+      pauperCheckEnabled: currentValidation.pauperCheckEnabled,
       status: currentValidation.overallValid ? 'approved' : 'issues',
       timestamp: serverTimestamp(),
       createdAt: new Date().toISOString()
@@ -483,7 +517,7 @@ function displayPreview(deck, validation, deckSize, sideboardCount = 0, sideboar
   // Ban list warnings
   if (!validation.banListValid && validation.bannedCards.length > 0) {
     warningsHtml += `
-      <div class="warning-header">🚫 Banned Cards (Brewers Cup Banlist):</div>
+      <div class="warning-header">🚫 Banned Cards (Tournament Banlist):</div>
       ${validation.bannedCards.map(card => `
         <div class="warning-item">
           ${card.quantity}x ${card.name}
@@ -493,7 +527,7 @@ function displayPreview(deck, validation, deckSize, sideboardCount = 0, sideboar
   }
   
   // Pauper legality warnings
-  if (!validation.pauperValid && validation.illegalCards.length > 0) {
+  if (validation.pauperCheckEnabled && !validation.pauperValid && validation.illegalCards.length > 0) {
     warningsHtml += `
       <div class="warning-header">⚠️ Not Pauper Legal (Scryfall):</div>
       ${validation.illegalCards.map(card => `
@@ -501,6 +535,16 @@ function displayPreview(deck, validation, deckSize, sideboardCount = 0, sideboar
           ${card.quantity}x ${card.name} <span class="legality-status">(${card.status})</span>
         </div>
       `).join('')}
+    `;
+  }
+  
+  // Show info if Pauper check is disabled
+  if (!validation.pauperCheckEnabled) {
+    warningsHtml += `
+      <div style="background: rgba(157, 78, 221, 0.1); border-left: 4px solid var(--primary); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md);">
+        <div style="font-weight: 600; color: var(--primary); margin-bottom: 0.5rem;">ℹ️ Pauper Check Disabled</div>
+        <div style="color: var(--text-muted); font-size: 0.9rem;">Pauper legality checking is disabled for this tournament.</div>
+      </div>
     `;
   }
   
@@ -593,10 +637,16 @@ function showSuccessPage(verificationCode, deckData) {
         <span>${deckData.bannedCards.map(c => `${c.quantity}x ${c.name}`).join(', ')}</span>
       </div>
     ` : ''}
-    ${!deckData.pauperValid && deckData.pauperIllegalCards && deckData.pauperIllegalCards.length > 0 ? `
+    ${deckData.pauperCheckEnabled && !deckData.pauperValid && deckData.pauperIllegalCards && deckData.pauperIllegalCards.length > 0 ? `
       <div class="info-row banned">
         <span>Non-Pauper:</span>
         <span>${deckData.pauperIllegalCards.map(c => `${c.quantity}x ${c.name}`).join(', ')}</span>
+      </div>
+    ` : ''}
+    ${!deckData.pauperCheckEnabled ? `
+      <div class="info-row" style="background: rgba(157, 78, 221, 0.1); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-sm);">
+        <span style="color: var(--primary);">ℹ️ Note:</span>
+        <span style="color: var(--text-muted);">Pauper check disabled</span>
       </div>
     ` : ''}
   `;

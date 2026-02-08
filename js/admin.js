@@ -9,6 +9,7 @@ let tournaments = [];
 let tournamentMap = new Map();
 let allPlayers = [];
 let selectedTournamentId = 'all';
+let selectedBanListTournamentId = 'default'; // For ban list management
 
 console.log('Firebase Auth initialized:', auth);
 
@@ -60,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const createTournamentBtn = document.getElementById('create-tournament-btn');
   const tournamentFilter = document.getElementById('tournament-filter');
   const exportPlayersBtn = document.getElementById('export-players-btn');
+  const banlistTournamentFilter = document.getElementById('banlist-tournament-filter');
   
   console.log('Login button element:', loginBtn);
   console.log('Logout button element:', logoutBtn);
@@ -84,8 +86,26 @@ document.addEventListener('DOMContentLoaded', () => {
       renderPlayers();
     });
   }
+  if (banlistTournamentFilter) {
+    banlistTournamentFilter.addEventListener('change', (e) => {
+      selectedBanListTournamentId = e.target.value;
+      loadBanList();
+    });
+  }
   if (exportPlayersBtn) {
     exportPlayersBtn.addEventListener('click', exportPlayersToText);
+  }
+  
+  // Bulk ban list entry
+  const addBulkCardsBtn = document.getElementById('add-bulk-cards-btn');
+  if (addBulkCardsBtn) {
+    addBulkCardsBtn.addEventListener('click', addBulkToBanList);
+  }
+  
+  // Pauper toggle
+  const pauperToggle = document.getElementById('pauper-toggle');
+  if (pauperToggle) {
+    pauperToggle.addEventListener('change', updatePauperToggle);
   }
 
   // Tournament delete modal buttons
@@ -417,6 +437,7 @@ async function loadTournaments() {
     });
 
     renderTournamentFilter();
+    renderBanListTournamentFilter(); // Also update ban list filter
     renderTournamentsList();
   } catch (error) {
     console.error('Error loading tournaments:', error);
@@ -437,6 +458,22 @@ function renderTournamentFilter() {
   )).join('');
 
   tournamentFilter.value = selectedTournamentId;
+}
+
+function renderBanListTournamentFilter() {
+  const banlistFilter = document.getElementById('banlist-tournament-filter');
+  if (!banlistFilter) return;
+
+  const options = [
+    { id: 'default', name: 'Global Ban List' },
+    ...tournaments.filter(t => t.id !== 'default')
+  ];
+
+  banlistFilter.innerHTML = options.map(option => (
+    `<option value="${option.id}">${option.name}</option>`
+  )).join('');
+
+  banlistFilter.value = selectedBanListTournamentId;
 }
 
 function getBaseUrl() {
@@ -503,7 +540,7 @@ function exportPlayersToText() {
     ? 'All Tournaments'
     : tournamentMap.get(selectedTournamentId) || selectedTournamentId;
 
-  text += `Brewers Cup - ${tournamentName}\n`;
+  text += `Pauper Spezl Registry - ${tournamentName}\n`;
   text += `Exported: ${new Date().toLocaleString()}\n`;
   text += `Total Players: ${filteredPlayers.length}\n`;
   text += `${'='.repeat(80)}\n\n`;
@@ -691,22 +728,88 @@ async function createTournament() {
   }
 }
 
+// Update Pauper legality toggle
+async function updatePauperToggle() {
+  const pauperToggle = document.getElementById('pauper-toggle');
+  const enabled = pauperToggle.checked;
+  
+  console.log(`Updating Pauper toggle for ${selectedBanListTournamentId}: ${enabled}`);
+  
+  try {
+    const { doc, updateDoc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    
+    if (selectedBanListTournamentId === 'default') {
+      // Update global setting
+      const banlistDocRef = doc(db, 'admin', 'banlist');
+      const docSnapshot = await getDoc(banlistDocRef);
+      
+      if (docSnapshot.exists()) {
+        await updateDoc(banlistDocRef, {
+          pauperCheckEnabled: enabled
+        });
+      } else {
+        await setDoc(banlistDocRef, {
+          cards: [],
+          pauperCheckEnabled: enabled
+        });
+      }
+    } else {
+      // Update tournament-specific setting
+      const tournamentRef = doc(db, 'tournaments', selectedBanListTournamentId);
+      await updateDoc(tournamentRef, {
+        pauperCheckEnabled: enabled
+      });
+    }
+    
+    console.log('Pauper toggle updated successfully');
+  } catch (err) {
+    console.error('Error updating Pauper toggle:', err);
+    // Revert the toggle on error
+    pauperToggle.checked = !enabled;
+  }
+}
+
 // Load and display ban list
 async function loadBanList() {
-  console.log('Loading ban list from Firestore...');
+  console.log(`Loading ban list from Firestore for ${selectedBanListTournamentId}...`);
   
   try {
     const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     
-    // Get the banlist document from admin collection
-    console.log('Getting document: admin/banlist');
-    const banlistDoc = doc(db, 'admin', 'banlist');
-    const docSnapshot = await getDoc(banlistDoc);
+    let cards = [];
+    let pauperCheckEnabled = true; // Default to true
     
-    console.log('Document exists:', docSnapshot.exists());
+    if (selectedBanListTournamentId === 'default') {
+      // Load global ban list
+      console.log('Getting global ban list: admin/banlist');
+      const banlistDoc = doc(db, 'admin', 'banlist');
+      const docSnapshot = await getDoc(banlistDoc);
+      
+      console.log('Document exists:', docSnapshot.exists());
+      
+      const banlistData = docSnapshot.data();
+      cards = banlistData?.cards || [];
+      pauperCheckEnabled = banlistData?.pauperCheckEnabled !== false; // Default true if not set
+    } else {
+      // Load tournament-specific ban list
+      console.log(`Getting tournament ban list: tournaments/${selectedBanListTournamentId}`);
+      const tournamentDoc = doc(db, 'tournaments', selectedBanListTournamentId);
+      const docSnapshot = await getDoc(tournamentDoc);
+      
+      console.log('Tournament document exists:', docSnapshot.exists());
+      
+      if (docSnapshot.exists()) {
+        const tournamentData = docSnapshot.data();
+        cards = tournamentData?.banList || [];
+        pauperCheckEnabled = tournamentData?.pauperCheckEnabled !== false; // Default true if not set
+      }
+    }
     
-    const banlistData = docSnapshot.data();
-    const cards = banlistData?.cards || [];
+    // Update Pauper toggle checkbox
+    const pauperToggle = document.getElementById('pauper-toggle');
+    if (pauperToggle) {
+      pauperToggle.checked = pauperCheckEnabled;
+    }
     
     console.log('Cards array length:', cards.length);
     
@@ -768,9 +871,78 @@ async function loadBanList() {
   }
 }
 
+// Add multiple cards to ban list (bulk entry)
+async function addBulkToBanList() {
+  console.log('addBulkToBanList called for tournament:', selectedBanListTournamentId);
+  const bulkInput = document.getElementById('bulk-banned-cards');
+  const bulkText = bulkInput.value.trim();
+  const banlistError = document.getElementById('banlist-error');
+  
+  if (!bulkText) {
+    if (banlistError) {
+      banlistError.textContent = 'Please enter card names (one per line)';
+      banlistError.classList.remove('hidden');
+    }
+    return;
+  }
+  
+  // Split by newlines and filter out empty lines
+  const cardNames = bulkText.split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  
+  if (cardNames.length === 0) {
+    if (banlistError) {
+      banlistError.textContent = 'No valid card names found';
+      banlistError.classList.remove('hidden');
+    }
+    return;
+  }
+  
+  try {
+    const { doc, updateDoc, arrayUnion, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    
+    if (selectedBanListTournamentId === 'default') {
+      // Update global ban list
+      const banlistDocRef = doc(db, 'admin', 'banlist');
+      await updateDoc(banlistDocRef, {
+        cards: arrayUnion(...cardNames)
+      });
+    } else {
+      // Update tournament-specific ban list
+      const tournamentRef = doc(db, 'tournaments', selectedBanListTournamentId);
+      const tournamentDoc = await getDoc(tournamentRef);
+      
+      if (tournamentDoc.exists()) {
+        await updateDoc(tournamentRef, {
+          banList: arrayUnion(...cardNames)
+        });
+      } else {
+        console.error('Tournament not found');
+        if (banlistError) {
+          banlistError.textContent = 'Tournament not found';
+          banlistError.classList.remove('hidden');
+        }
+        return;
+      }
+    }
+    
+    console.log(`Added ${cardNames.length} cards to ban list`);
+    if (banlistError) banlistError.classList.add('hidden');
+    bulkInput.value = '';
+    await loadBanList();
+  } catch (err) {
+    console.error('Error adding bulk cards:', err);
+    if (banlistError) {
+      banlistError.textContent = 'Error adding cards: ' + err.message;
+      banlistError.classList.remove('hidden');
+    }
+  }
+}
+
 // Add card to ban list
 async function addToBanList() {
-  console.log('addToBanList called');
+  console.log('addToBanList called for tournament:', selectedBanListTournamentId);
   const cardNameInput = document.getElementById('new-banned-card');
   const cardName = cardNameInput.value.trim();
   const banlistError = document.getElementById('banlist-error');
@@ -787,13 +959,35 @@ async function addToBanList() {
   }
   
   try {
-    const { doc, updateDoc, arrayUnion } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
-    const banlistDocRef = doc(db, 'admin', 'banlist');
+    const { doc, updateDoc, arrayUnion, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     
-    // Add card to the cards array
-    await updateDoc(banlistDocRef, {
-      cards: arrayUnion(cardName)
-    });
+    if (selectedBanListTournamentId === 'default') {
+      // Update global ban list
+      const banlistDocRef = doc(db, 'admin', 'banlist');
+      await updateDoc(banlistDocRef, {
+        cards: arrayUnion(cardName)
+      });
+    } else {
+      // Update tournament-specific ban list
+      const tournamentRef = doc(db, 'tournaments', selectedBanListTournamentId);
+      const tournamentDoc = await getDoc(tournamentRef);
+      
+      if (tournamentDoc.exists()) {
+        const currentBanList = tournamentDoc.data().banList || [];
+        if (!currentBanList.includes(cardName)) {
+          await updateDoc(tournamentRef, {
+            banList: arrayUnion(cardName)
+          });
+        }
+      } else {
+        console.error('Tournament not found');
+        if (banlistError) {
+          banlistError.textContent = 'Tournament not found';
+          banlistError.classList.remove('hidden');
+        }
+        return;
+      }
+    }
     
     console.log('Card added to ban list:', cardName);
     if (banlistError) banlistError.classList.add('hidden');
@@ -810,22 +1004,39 @@ async function addToBanList() {
 
 // Remove card from ban list
 async function removeFromBanList(cardIndex) {
-  console.log('Removing card at index:', cardIndex);
+  console.log('Removing card at index:', cardIndex, 'from tournament:', selectedBanListTournamentId);
   try {
     const { doc, getDoc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
-    const banlistDocRef = doc(db, 'admin', 'banlist');
     
-    // Get current array
-    const docSnapshot = await getDoc(banlistDocRef);
-    const cards = docSnapshot.data()?.cards || [];
+    let cards = [];
     
-    // Remove card at index
-    cards.splice(cardIndex, 1);
-    
-    // Update document with new array
-    await updateDoc(banlistDocRef, {
-      cards: cards
-    });
+    if (selectedBanListTournamentId === 'default') {
+      // Get global ban list
+      const banlistDocRef = doc(db, 'admin', 'banlist');
+      const docSnapshot = await getDoc(banlistDocRef);
+      cards = docSnapshot.data()?.cards || [];
+      
+      // Remove card at index
+      cards.splice(cardIndex, 1);
+      
+      // Update global ban list
+      await updateDoc(banlistDocRef, {
+        cards: cards
+      });
+    } else {
+      // Get tournament ban list
+      const tournamentRef = doc(db, 'tournaments', selectedBanListTournamentId);
+      const tournamentDoc = await getDoc(tournamentRef);
+      cards = tournamentDoc.data()?.banList || [];
+      
+      // Remove card at index
+      cards.splice(cardIndex, 1);
+      
+      // Update tournament ban list
+      await updateDoc(tournamentRef, {
+        banList: cards
+      });
+    }
     
     console.log('Card removed from ban list successfully');
     await loadBanList(); // Reload the list
