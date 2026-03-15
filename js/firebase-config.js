@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCyGi3CcUWBPSyaSbAyCaTyNZNzpLWUqrU",
@@ -20,5 +21,9 @@ console.log('Firebase initialized successfully');
 const db = getFirestore(app);
 console.log('Firestore initialized successfully');
 
+// Initialize Storage
+const storage = getStorage(app);
+console.log('Firebase Storage initialized successfully');
+
 // Export for use in other modules
-export { app, db };
+export { app, db, storage };

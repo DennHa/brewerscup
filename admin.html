@@ -203,7 +203,17 @@
                   class="form-input"
                   placeholder="https://example.com/banner.jpg"
                 >
-                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">Displayed at the top of the submission page for this tournament</small>
+                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">Paste a URL or upload an image below</small>
+              </div>
+              <div class="form-group">
+                <label for="new-tournament-banner-file">Or Upload Image</label>
+                <input
+                  type="file"
+                  id="new-tournament-banner-file"
+                  class="form-input"
+                  accept="image/*"
+                >
+                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">PNG, JPG, GIF, WebP (max 5MB)</small>
               </div>
               <button class="btn btn-primary" id="create-tournament-btn">➕ Create</button>
               <div id="tournament-create-status" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>

@@ -741,7 +741,47 @@ async function createTournament() {
       return;
     }
 
-    const bannerUrl = document.getElementById('new-tournament-banner')?.value.trim() || null;
+    const bannerUrl_url = document.getElementById('new-tournament-banner')?.value.trim() || null;
+    const bannerFile = document.getElementById('new-tournament-banner-file')?.files[0];
+
+    let bannerUrl = bannerUrl_url;
+
+    // Upload file if provided
+    if (bannerFile) {
+      if (bannerFile.size > 5 * 1024 * 1024) {
+        if (statusEl) {
+          statusEl.textContent = 'Banner image is too large (max 5MB).';
+          statusEl.classList.add('alert-error');
+          statusEl.classList.remove('hidden');
+        }
+        return;
+      }
+
+      try {
+        if (statusEl) {
+          statusEl.textContent = 'Uploading banner image...';
+          statusEl.classList.remove('alert-error');
+          statusEl.classList.add('alert-info');
+          statusEl.classList.remove('hidden');
+        }
+
+        const { ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js');
+        const { storage } = await import('./firebase-config.js');
+        const storageRef = ref(storage, `tournament-banners/${slug}/${bannerFile.name}`);
+        await uploadBytes(storageRef, bannerFile);
+        bannerUrl = await getDownloadURL(storageRef);
+        console.log('✅ Banner uploaded:', bannerUrl);
+      } catch (uploadError) {
+        console.error('❌ Error uploading banner:', uploadError);
+        if (statusEl) {
+          statusEl.textContent = `Failed to upload banner: ${uploadError.message}`;
+          statusEl.classList.add('alert-error');
+          statusEl.classList.remove('alert-info');
+          statusEl.classList.remove('hidden');
+        }
+        return;
+      }
+    }
 
     const tournamentData = {
       name,
@@ -756,11 +796,14 @@ async function createTournament() {
       statusEl.textContent = 'Tournament created successfully.';
       statusEl.classList.remove('hidden');
       statusEl.classList.remove('alert-error');
+      statusEl.classList.remove('alert-info');
     }
 
     nameInput.value = '';
     const bannerInput = document.getElementById('new-tournament-banner');
+    const bannerFileInput = document.getElementById('new-tournament-banner-file');
     if (bannerInput) bannerInput.value = '';
+    if (bannerFileInput) bannerFileInput.value = '';
     await loadTournaments();
     renderPlayers();
   } catch (error) {
