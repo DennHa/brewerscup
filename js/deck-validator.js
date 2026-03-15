@@ -224,8 +224,8 @@ export function parseDecklistText(deckText) {
     // Skip empty lines and comments
     if (!line || line.startsWith('//')) continue;
 
-    // Match patterns like "4x Card Name" or "4 Card Name"
-    const match = line.match(/^(\d+)x?\s+(.+)$/) || line.match(/^(\d+)\s+(.+)$/);
+    // Match patterns like "4x Card Name", "4X Card Name", "4 x Card Name", or "4 Card Name"
+    const match = line.match(/^(\d+)\s*[xX]?\s+(.+)$/);
     
     if (match) {
       const quantity = parseInt(match[1], 10);
