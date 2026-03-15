@@ -109,6 +109,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (addBulkCardsBtn) {
     addBulkCardsBtn.addEventListener('click', addBulkToBanList);
   }
+
+  // Remove all banned cards
+  const removeAllBanlistBtn = document.getElementById('remove-all-banlist-btn');
+  if (removeAllBanlistBtn) {
+    removeAllBanlistBtn.addEventListener('click', removeAllFromBanList);
+  }
   
   // Pauper toggle
   const pauperToggle = document.getElementById('pauper-toggle');
@@ -1092,12 +1098,14 @@ async function removeFromBanList(cardIndex) {
     const { doc, getDoc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
     
     let cards = [];
+    let cardName = '';
     
     if (selectedBanListTournamentId === 'default') {
       // Get global ban list
       const banlistDocRef = doc(db, 'admin', 'banlist');
       const docSnapshot = await getDoc(banlistDocRef);
       cards = docSnapshot.data()?.cards || [];
+      cardName = cards[cardIndex] || 'Unknown';
       
       // Remove card at index
       cards.splice(cardIndex, 1);
@@ -1111,6 +1119,7 @@ async function removeFromBanList(cardIndex) {
       const tournamentRef = doc(db, 'tournaments', selectedBanListTournamentId);
       const tournamentDoc = await getDoc(tournamentRef);
       cards = tournamentDoc.data()?.banList || [];
+      cardName = cards[cardIndex] || 'Unknown';
       
       // Remove card at index
       cards.splice(cardIndex, 1);
@@ -1121,10 +1130,45 @@ async function removeFromBanList(cardIndex) {
       });
     }
     
-    console.log('Card removed from ban list successfully');
+    console.log('✅ Card removed from ban list:', cardName);
+    alert(`✅ Removed "${cardName}" from ban list`);
     await loadBanList(); // Reload the list
   } catch (err) {
-    console.error('Error removing card:', err);
+    console.error('❌ Error removing card:', err);
+    alert(`❌ Error removing card: ${err.message}`);
+  }
+}
+
+// Remove all cards from ban list
+async function removeAllFromBanList() {
+  const tournamentName = selectedBanListTournamentId === 'default' ? 'Global' : (tournamentMap.get(selectedBanListTournamentId) || selectedBanListTournamentId);
+  const confirmed = confirm(`⚠️ Are you sure you want to remove ALL banned cards from the ${tournamentName} ban list? This cannot be undone.`);
+  
+  if (!confirmed) return;
+
+  try {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    
+    if (selectedBanListTournamentId === 'default') {
+      // Clear global ban list
+      const banlistDocRef = doc(db, 'admin', 'banlist');
+      await updateDoc(banlistDocRef, {
+        cards: []
+      });
+    } else {
+      // Clear tournament ban list
+      const tournamentRef = doc(db, 'tournaments', selectedBanListTournamentId);
+      await updateDoc(tournamentRef, {
+        banList: []
+      });
+    }
+    
+    console.log('✅ All banned cards removed');
+    alert(`✅ Cleared all banned cards from ${tournamentName} ban list`);
+    await loadBanList(); // Reload the list
+  } catch (err) {
+    console.error('❌ Error clearing ban list:', err);
+    alert(`❌ Error clearing ban list: ${err.message}`);
   }
 }
 

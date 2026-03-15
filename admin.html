@@ -170,7 +170,10 @@
 
             <!-- Current Ban List -->
             <div class="banlist-display">
-              <h3>Current Banned Cards</h3>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                <h3>Current Banned Cards</h3>
+                <button class="btn btn-danger" id="remove-all-banlist-btn" style="background: var(--danger); color: white; padding: 0.5rem 1rem; font-size: 0.9rem;">🗑️ Remove All</button>
+              </div>
               <div id="banlist-cards" class="banlist-cards"></div>
               <div id="banlist-error" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
             </div>
