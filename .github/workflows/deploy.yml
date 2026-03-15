@@ -12,9 +12,12 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Generate firebase-config.js from secrets
       run: |
@@ -50,15 +53,14 @@ jobs:
         export { app, db, storage };
         EOF
 
-    - name: Setup Pages
-      uses: actions/configure-pages@v3
-
     - name: Upload artifact
-      uses: actions/upload-pages-artifact@v2
+      uses: actions/upload-artifact@v4
       with:
+        name: github-pages
         path: '.'
+        retention-days: 1
 
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@v2
+      uses: actions/deploy-pages@v3
 
