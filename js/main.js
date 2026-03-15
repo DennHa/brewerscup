@@ -201,6 +201,17 @@ async function initTournamentContext() {
     if (tournamentDoc.exists()) {
       const data = tournamentDoc.data();
       currentTournamentName = data.name || slug;
+
+      // Show tournament banner if set
+      if (data.bannerUrl) {
+        const bannerContainer = document.getElementById('tournament-banner');
+        const bannerImg = document.getElementById('tournament-banner-img');
+        if (bannerContainer && bannerImg) {
+          bannerImg.src = data.bannerUrl;
+          bannerImg.alt = `${currentTournamentName} Banner`;
+          bannerContainer.classList.remove('hidden');
+        }
+      }
     }
   } catch (error) {
     console.warn('⚠️ Failed to load tournament info:', error.message);
@@ -662,7 +673,7 @@ function showSuccessPage(verificationCode, deckData) {
  * Generate a unique verification code
  */
 async function generateVerificationCode() {
-  // Pauper-themed words for memorable codes
+  // Pauper-themed words for memorable codes (ADJECTIVE-NOUN format)
   const adjectives = [
     'SWIFT', 'BOLD', 'DARK', 'STORM', 'WILD', 'KEEN', 'WISE', 'STRONG',
     'BLUE', 'RED', 'GREEN', 'BLACK', 'WHITE', 'TEMPO', 'COMBO', 'CONTROL',
@@ -671,16 +682,9 @@ async function generateVerificationCode() {
   
   const nouns = [
     'BOLT', 'DRAKE', 'GOBLIN', 'SPIDER', 'KNIGHT', 'WIZARD', 'SAGE',
-    'TOWER', 'FLAME', 'STORM', 'WAVE', 'WOLF', 'RAVEN', 'DRAGON',
-    'PHOENIX', 'GRIFFIN', 'BEAST', 'SPIRIT', 'SHADOW', 'LIGHT', 'MAGE'
-  ];
-
-  // Common Pauper format card names (shortened/simplified)
-  const cards = [
-    'BOLT', 'RITUAL', 'SPRITE', 'PROBE', 'BLAST', 'TRON', 'WALL',
-    'AUGUR', 'ANGLER', 'HAWK', 'SNAP', 'FLARE', 'PULSE', 'RELIC',
-    'HYDRO', 'CURSE', 'BONDER', 'ARMS', 'SKRED', 'PONDER', 'BRAINSTORM',
-    'PREORDAIN', 'DAZE', 'FORCE', 'HYMN', 'LOTUS', 'GUSH', 'PROBE'
+    'TOWER', 'FLAME', 'WAVE', 'WOLF', 'RAVEN', 'DRAGON',
+    'PHOENIX', 'GRIFFIN', 'BEAST', 'SPIRIT', 'SHADOW', 'LIGHT', 'MAGE',
+    'HAWK', 'SNAP', 'FLARE', 'PULSE', 'RELIC', 'WALL', 'AUGUR'
   ];
   
   let code;
@@ -691,9 +695,8 @@ async function generateVerificationCode() {
   do {
     const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
     const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const card = cards[Math.floor(Math.random() * cards.length)];
     
-    code = `${adjective}-${noun}-${card}`;
+    code = `${adjective}-${noun}`;
     
     // Check if code already exists in Firestore
     const { query: fsQuery, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');

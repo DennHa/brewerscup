@@ -13,6 +13,10 @@ let selectedBanListTournamentId = 'default'; // For ban list management
 
 console.log('Firebase Auth initialized:', auth);
 
+function escapeAttr(str) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // Check if already logged in
 auth.onAuthStateChanged((user) => {
   console.log('Auth state changed:', user ? 'User logged in' : 'User logged out');
@@ -94,6 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (exportPlayersBtn) {
     exportPlayersBtn.addEventListener('click', exportPlayersToText);
+  }
+  const revalidateBtn = document.getElementById('revalidate-all-btn');
+  if (revalidateBtn) {
+    revalidateBtn.addEventListener('click', revalidateAllDecks);
   }
   
   // Bulk ban list entry
@@ -495,6 +503,9 @@ function renderTournamentsList() {
   listEl.innerHTML = filtered.map((tournament, idx) => {
     // Use query parameter format for compatibility with local dev servers
     const link = `${baseUrl}index.html?t=${encodeURIComponent(tournament.id)}`;
+    const bannerPreview = tournament.bannerUrl
+      ? `<div style="margin-top: var(--spacing-sm);"><img src="${escapeAttr(tournament.bannerUrl)}" alt="Banner" style="max-width: 200px; max-height: 60px; border-radius: var(--radius-sm); object-fit: cover;"></div>`
+      : '';
     return `
       <div style="padding: var(--spacing-sm) 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
         <div style="flex: 1;">
@@ -502,8 +513,13 @@ function renderTournamentsList() {
           <div style="font-size: 0.85rem; color: var(--text-muted);">
             <a href="${link}" target="_blank" style="color: var(--primary);">${link}</a>
           </div>
+          ${bannerPreview}
+          <div style="margin-top: var(--spacing-sm); display: flex; gap: var(--spacing-sm); align-items: center;">
+            <input type="url" class="form-input tournament-banner-input" data-tournament-id="${tournament.id}" placeholder="Banner image URL" value="${escapeAttr(tournament.bannerUrl || '')}" style="font-size: 0.85rem; padding: 0.3rem 0.5rem; flex: 1;">
+            <button class="btn btn-secondary save-banner-btn" data-tournament-id="${tournament.id}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; white-space: nowrap;">💾 Save Banner</button>
+          </div>
         </div>
-        <button class="btn btn-danger delete-tournament-btn" data-tournament-idx="${idx}" style="font-size: 0.85rem; background: var(--danger); color: white; padding: 0.4rem 0.8rem;">🗑️ Delete</button>
+        <button class="btn btn-danger delete-tournament-btn" data-tournament-idx="${idx}" style="font-size: 0.85rem; background: var(--danger); color: white; padding: 0.4rem 0.8rem; margin-left: var(--spacing-md); align-self: flex-start;">🗑️ Delete</button>
       </div>
     `;
   }).join('');
@@ -514,6 +530,28 @@ function renderTournamentsList() {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.tournamentIdx);
       showTournamentDeleteModal(filtered[idx]);
+    });
+  });
+
+  // Attach save banner button listeners
+  const saveBannerBtns = listEl.querySelectorAll('.save-banner-btn');
+  saveBannerBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const tournamentId = btn.dataset.tournamentId;
+      const input = listEl.querySelector(`.tournament-banner-input[data-tournament-id="${tournamentId}"]`);
+      const bannerUrl = input?.value.trim() || null;
+      try {
+        const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+        const tournamentRef = doc(db, 'tournaments', tournamentId);
+        await updateDoc(tournamentRef, { bannerUrl: bannerUrl || '' });
+        btn.textContent = '✅ Saved';
+        setTimeout(() => { btn.textContent = '💾 Save Banner'; }, 2000);
+        await loadTournaments();
+      } catch (error) {
+        console.error('Error saving banner:', error);
+        btn.textContent = '❌ Error';
+        setTimeout(() => { btn.textContent = '💾 Save Banner'; }, 2000);
+      }
     });
   });
 }
@@ -703,11 +741,16 @@ async function createTournament() {
       return;
     }
 
-    await setDoc(tournamentRef, {
+    const bannerUrl = document.getElementById('new-tournament-banner')?.value.trim() || null;
+
+    const tournamentData = {
       name,
       slug,
       createdAt: serverTimestamp()
-    });
+    };
+    if (bannerUrl) tournamentData.bannerUrl = bannerUrl;
+
+    await setDoc(tournamentRef, tournamentData);
 
     if (statusEl) {
       statusEl.textContent = 'Tournament created successfully.';
@@ -716,6 +759,8 @@ async function createTournament() {
     }
 
     nameInput.value = '';
+    const bannerInput = document.getElementById('new-tournament-banner');
+    if (bannerInput) bannerInput.value = '';
     await loadTournaments();
     renderPlayers();
   } catch (error) {
@@ -820,20 +865,15 @@ async function loadBanList() {
       if (cards.length > 0) {
         console.log('Building HTML for', cards.length, 'cards...');
         
-        // Render first 50 cards to avoid rendering too many at once
-        const displayLimit = 50;
-        const displayCards = cards.slice(0, displayLimit);
-        
-        const html = displayCards.map((cardName, idx) => `
+        // Render all banned cards
+        const html = cards.map((cardName, idx) => `
           <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm); border: 1px solid var(--border);">
             <span style="font-weight: 600; color: var(--primary);">${cardName}</span>
             <button class="btn btn-danger" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: var(--danger); color: white;" onclick="removeFromBanList(${idx})">Remove</button>
           </div>
         `).join('');
         
-        const message = cards.length > displayLimit ? `<p style="color: var(--text-muted); margin-bottom: var(--spacing-md);">Showing ${displayLimit} of ${cards.length} banned cards</p>` : '';
-        
-        const fullHtml = message + html;
+        const fullHtml = html;
         console.log('HTML length:', fullHtml.length);
         console.log('First 200 chars:', fullHtml.substring(0, 200));
         
@@ -1111,5 +1151,118 @@ async function deleteDeck(playerData) {
   } catch (err) {
     console.error('Error deleting deck:', err);
     alert('Error deleting deck: ' + err.message);
+  }
+}
+
+// Revalidate all decks against current ban list and Pauper legality
+async function revalidateAllDecks() {
+  const statusEl = document.getElementById('revalidate-status');
+  const confirmRevalidate = confirm('This will revalidate all submitted decks against the current ban list and Pauper legality rules. This may take a few minutes. Continue?');
+  
+  if (!confirmRevalidate) return;
+
+  try {
+    if (statusEl) {
+      statusEl.textContent = '🔄 Starting revalidation...';
+      statusEl.classList.remove('hidden');
+      statusEl.classList.remove('alert-error');
+      statusEl.classList.add('alert-info');
+    }
+
+    const { collection: fsCollection, getDocs, doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js');
+    const { validateAgainstBanlist, validatePauperLegality, getBanList } = await import('./deck-validator.js');
+
+    // Load global ban list
+    const banList = await getBanList('default');
+    console.log('🚫 Loaded ban list with', banList.length, 'cards');
+
+    // Get all decks
+    const decksCollection = fsCollection(db, 'decks');
+    const snapshot = await getDocs(decksCollection);
+    const totalDecks = snapshot.size;
+    
+    if (totalDecks === 0) {
+      if (statusEl) {
+        statusEl.textContent = '✅ No decks to revalidate.';
+        statusEl.classList.remove('alert-info');
+        statusEl.classList.add('alert-info');
+      }
+      return;
+    }
+
+    console.log(`\uD83D\uDCC4 Found ${totalDecks} decks to revalidate`);
+    let revalidatedCount = 0;
+    let errorCount = 0;
+
+    for (const deckDoc of snapshot.docs) {
+      try {
+        const deckId = deckDoc.id;
+        const deckData = deckDoc.data();
+        // Map stored cards to expected structure for validation functions
+        const mainboard = (deckData.mainboard || []).map(card => ({
+          normalizedName: card.name, // stored as 'name'
+          originalName: card.originalName,
+          quantity: card.quantity
+        }));
+        const sideboard = (deckData.sideboard || []).map(card => ({
+          normalizedName: card.name,
+          originalName: card.originalName,
+          quantity: card.quantity
+        }));
+        const allCards = [...mainboard, ...sideboard];
+
+        // Revalidate against ban list
+        const banListValidation = validateAgainstBanlist(allCards, banList);
+
+        // Revalidate Pauper legality (card names are already normalized in stored deck)
+        let pauperValidation = { valid: true, illegalCards: [] };
+        try {
+          pauperValidation = await validatePauperLegality(allCards);
+        } catch (err) {
+          console.warn(`⚠️ Error checking Pauper legality for deck ${deckId}:`, err.message);
+        }
+
+        // Update deck with new validation results
+        const deckRef = doc(db, 'decks', deckId);
+        await updateDoc(deckRef, {
+          banListValid: banListValidation.valid,
+          pauperValid: pauperValidation.valid,
+          isValid: banListValidation.valid && pauperValidation.valid,
+          bannedCards: banListValidation.bannedCards || [],
+          pauperIllegalCards: pauperValidation.illegalCards?.map(c => c.name) || [],
+          status: (banListValidation.valid && pauperValidation.valid) ? 'approved' : 'issues'
+        });
+
+        revalidatedCount++;
+        const progress = Math.round((revalidatedCount / totalDecks) * 100);
+        
+        if (statusEl) {
+          statusEl.textContent = `🔄 Revalidating... ${revalidatedCount}/${totalDecks} (${progress}%)`;
+        }
+
+      } catch (err) {
+        console.error(`❌ Error revalidating deck ${deckDoc.id}:`, err);
+        errorCount++;
+      }
+    }
+
+    if (statusEl) {
+      const message = errorCount > 0 
+        ? `✅ Revalidation complete! ${revalidatedCount} updated, ${errorCount} errors`
+        : `✅ Revalidation complete! ${revalidatedCount} decks updated`;
+      statusEl.textContent = message;
+      statusEl.classList.remove('alert-info');
+    }
+
+    // Reload players list
+    await loadPlayers();
+
+  } catch (error) {
+    console.error('❌ Error during revalidation:', error);
+    if (statusEl) {
+      statusEl.textContent = `❌ Revalidation failed: ${error.message}`;
+      statusEl.classList.remove('alert-info');
+      statusEl.classList.add('alert-error');
+    }
   }
 }
