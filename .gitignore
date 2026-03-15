@@ -1,8 +1,10 @@
 # Git ignore file
 # Exclude sensitive files from version control
 
-# Note: firebase-config.js and admin.js are now committed to GitHub
-# (They contain the production Firebase config needed for GitHub Pages)
+# ⚠️ SECURITY: Never commit credentials to version control
+# Use firebase-config.example.js as a template instead
+js/firebase-config.js
+js/admin.js
 
 # Node modules (if using npm)
 node_modules/

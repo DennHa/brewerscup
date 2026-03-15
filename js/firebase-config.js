@@ -3,7 +3,7 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.7.0/firebase
 import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCyGi3CcUWBPSyaSbAyCaTyNZNzpLWUqrU",
+  apiKey: "AIzaSyDWkepFbhEtkOHyrasA4Ak9xtJ0ZsZbOR0",
   authDomain: "brewerscup-77eaa.firebaseapp.com",
   projectId: "brewerscup-77eaa",
   storageBucket: "brewerscup-77eaa.firebasestorage.app",
