@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check Deck Status - Pauper Spezl Registry</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <div class="brand-text">
+          <h1>Pauper Spezl Registry</h1>
+        </div>
+      </div>
+      <!-- Hamburger Menu -->
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <!-- Mobile Menu -->
+      <div class="nav-menu" id="nav-menu">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link active">Check Deck</a>
+        <a href="admin.html" class="nav-link">Admin</a>
+      </div>
+      <!-- Desktop Menu -->
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link active">Check Deck</a>
+        <a href="admin.html" class="nav-link">Admin</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container">
+      <div class="section-header">
+        <h2>Check Your Deck Status</h2>
+        <p>Enter your verification code to view and edit your deck</p>
+      </div>
+
+      <!-- Lookup Form -->
+      <div class="check-container">
+        <div class="form-group">
+          <label for="verificationCode">Verification Code</label>
+          <div class="input-with-button">
+            <input 
+              type="text" 
+              id="verificationCode" 
+              class="form-input" 
+              placeholder="E.g., SWIFT-DRAKE" 
+              maxlength="30"
+            >
+            <button class="btn btn-primary" id="lookup-btn">🔍 Look Up</button>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="check-error" class="alert alert-error hidden"></div>
+
+        <!-- Loading Spinner -->
+        <div id="check-loading" class="loading hidden">
+          <div class="spinner"></div>
+          <p>Looking up your deck...</p>
+        </div>
+      </div>
+
+      <!-- Check Result -->
+      <div id="check-result" class="check-result hidden">
+        <!-- Player Info Section -->
+        <div class="result-section">
+          <h2>📋 Deck Information</h2>
+          <div id="check-details" class="details-grid"></div>
+        </div>
+
+        <!-- View Mode: Decklist -->
+        <div id="view-mode" class="result-section">
+          <h2>🃏 Decklist</h2>
+          <div id="check-deck-list" class="deck-list"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="result-actions">
+          <button class="btn btn-secondary" id="edit-deck-btn">✏️ Edit Deck</button>
+          <button class="btn btn-secondary" id="download-btn">📥 Download List</button>
+          <button class="btn btn-secondary" id="check-another-btn">🔄 Check Another</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Edit Deck Modal -->
+  <div id="edit-deck-modal" class="deck-modal hidden">
+    <div class="deck-modal-content">
+      <button class="modal-close-btn" id="edit-modal-close-btn">✕</button>
+      <div class="modal-header">
+        <h2>✏️ Edit Your Decklist</h2>
+      </div>
+      <div id="modal-edit-content" class="modal-deck-content">
+        <div class="deck-section">
+          <p style="color: var(--text-muted); margin-bottom: var(--spacing-md);">Enter each card on a new line with quantity (e.g., "2x Island")</p>
+          <textarea 
+            id="edit-deck-textarea" 
+            class="form-input" 
+            style="font-family: 'Courier New', monospace; height: 400px; resize: vertical;"
+          ></textarea>
+          <div id="edit-error" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
+        </div>
+
+        <!-- Revalidation Results (shown after revalidate) -->
+        <div id="modal-revalidation-results" class="deck-section hidden">
+          <h3>✓ Validation Results</h3>
+          <div id="modal-revalidation-details" class="details-grid"></div>
+          <div id="modal-revalidation-deck-list" class="deck-list" style="margin-top: var(--spacing-lg);"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg);">
+          <button class="btn btn-primary" id="revalidate-btn" style="flex: 1;">🔄 Revalidate</button>
+          <button class="btn btn-secondary" id="save-deck-btn" style="flex: 1; display: none;">💾 Save Changes</button>
+          <button class="btn btn-secondary" id="cancel-edit-btn" style="flex: 1;">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Hamburger Menu Toggle for check-status.html
+    document.addEventListener('DOMContentLoaded', () => {
+      const menuToggle = document.getElementById('menu-toggle');
+      const navMenu = document.getElementById('nav-menu');
+      const navLinks = document.querySelectorAll('.nav-menu .nav-link');
+
+      if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+          menuToggle.classList.toggle('active');
+          navMenu.classList.toggle('active');
+        });
+      }
+
+      navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+          if (menuToggle) menuToggle.classList.remove('active');
+          if (navMenu) navMenu.classList.remove('active');
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.navbar') && navMenu && navMenu.classList.contains('active')) {
+          menuToggle.classList.remove('active');
+          navMenu.classList.remove('active');
+        }
+      });
+    });
+  </script>
+  <script type="module" src="js/check-status.js"></script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Pauper Spezl Registry</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <div class="navbar-brand">
+        <div class="brand-text">
+          <h1>Pauper Spezl Registry</h1>
+        </div>
+      </div>
+      <!-- Hamburger Menu -->
+      <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <!-- Mobile Menu -->
+      <div class="nav-menu" id="nav-menu">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link">Check Deck</a>
+        <a href="admin.html" class="nav-link active">Admin</a>
+        <button id="logout-admin-btn-mobile" class="nav-link" style="display: none; background: none; border: none; cursor: pointer; padding: 0; color: var(--text-light); font-weight: 500;">Logout</button>
+      </div>
+      <!-- Desktop Menu -->
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Submit Deck</a>
+        <a href="check-status.html" class="nav-link">Check Deck</a>
+        <a href="admin.html" class="nav-link active">Admin</a>
+        <button id="logout-admin-btn" class="nav-link" style="display: none; background: none; border: none; cursor: pointer; padding: var(--spacing-sm) var(--spacing-md);">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container">
+      <!-- Login Section -->
+      <section id="login-section" class="login-section">
+        <div class="section-header">
+          <h2>Admin Dashboard</h2>
+          <p>Sign in with your email to view player submissions</p>
+        </div>
+
+        <div class="login-container">
+          <div class="form-group">
+            <label for="admin-email">Admin Email</label>
+            <input type="email" id="admin-email" class="form-input" placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label for="admin-password">Password</label>
+            <input type="password" id="admin-password" class="form-input" placeholder="Enter password">
+          </div>
+          <button class="btn btn-primary" id="admin-login-btn" style="width: 100%; margin-top: 1rem;">
+            Sign In
+          </button>
+          <div id="login-error" class="alert alert-error hidden" style="margin-top: 1rem;"></div>
+        </div>
+      </section>
+
+      <!-- Admin Content Section -->
+      <section id="admin-section" class="admin-section hidden">
+        <!-- Tabs for Players and Ban List -->
+        <div class="admin-tabs">
+          <button class="admin-tab-btn active" id="players-tab-btn">📊 Players</button>
+          <button class="admin-tab-btn" id="banlist-tab-btn">🚫 Ban List</button>
+          <button class="admin-tab-btn" id="tournaments-tab-btn">🏆 Tournaments</button>
+        </div>
+
+        <!-- Players Tab Content -->
+        <div id="players-tab" class="admin-tab-content active">
+          <div class="section-header">
+            <h2>📊 Registered Players</h2>
+            <p id="player-count"></p>
+          </div>
+
+          <div style="display: flex; gap: var(--spacing-md); align-items: flex-end; margin-bottom: var(--spacing-lg);">
+            <div class="form-group" style="max-width: 320px; margin-bottom: 0;">
+              <label for="tournament-filter">Tournament</label>
+              <select id="tournament-filter" class="form-input"></select>
+            </div>
+            <button id="export-players-btn" class="btn btn-secondary" style="height: fit-content;">📥 Export All</button>
+            <button id="revalidate-all-btn" class="btn btn-primary" style="height: fit-content;">🔄 Revalidate All</button>
+          </div>
+          <div id="revalidate-status" class="alert alert-info hidden" style="margin-bottom: var(--spacing-lg);"></div>
+
+          <!-- Players List -->
+          <div id="players-list" class="players-list"></div>
+
+          <!-- Error Message -->
+          <div id="admin-error" class="alert alert-error hidden"></div>
+        </div>
+
+        <!-- Ban List Tab Content -->
+        <div id="banlist-tab" class="admin-tab-content hidden">
+          <div class="section-header">
+            <h2>🚫 Manage Ban List</h2>
+            <p>Add or remove banned cards for Pauper format</p>
+          </div>
+
+          <div style="max-width: 320px; margin-bottom: var(--spacing-lg);">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="banlist-tournament-filter">Tournament</label>
+              <select id="banlist-tournament-filter" class="form-input">
+                <option value="default">Global Ban List</option>
+              </select>
+            </div>
+            <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">
+              Each tournament can have its own ban list
+            </small>
+          </div>
+
+          <div class="banlist-container">
+            <!-- Add Card Form -->
+            <div class="banlist-form">
+              <h3>Add Cards to Ban List</h3>
+              
+              <!-- Single Card Entry -->
+              <div class="form-group">
+                <label for="new-banned-card">Single Card</label>
+                <input 
+                  type="text" 
+                  id="new-banned-card" 
+                  class="form-input" 
+                  placeholder="Enter card name" 
+                >
+                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">
+                  Add one card at a time
+                </small>
+              </div>
+              <button class="btn btn-primary" id="add-card-btn" style="width: 100%; margin-bottom: var(--spacing-xl);">➕ Add Card</button>
+              
+              <!-- Bulk Entry -->
+              <div class="form-group">
+                <label for="bulk-banned-cards">Bulk Entry</label>
+                <textarea 
+                  id="bulk-banned-cards" 
+                  class="form-input" 
+                  placeholder="Paste multiple card names (one per line)"
+                  rows="8"
+                  style="resize: vertical; font-family: monospace;"
+                ></textarea>
+                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">
+                  Add multiple cards at once, one card name per line
+                </small>
+              </div>
+              <button class="btn btn-primary" id="add-bulk-cards-btn" style="width: 100%; margin-bottom: var(--spacing-xl);">➕ Add All Cards</button>
+              
+              <!-- Pauper Toggle -->
+              <div class="form-group" style="margin-bottom: 0;">
+                <div style="display: flex; align-items: center; gap: var(--spacing-md); padding: var(--spacing-md); background: var(--bg-darker); border-radius: var(--radius-md); border: 1px solid var(--border);">
+                  <input 
+                    type="checkbox" 
+                    id="pauper-toggle" 
+                    style="width: 20px; height: 20px; cursor: pointer;"
+                  >
+                  <label for="pauper-toggle" style="margin: 0; cursor: pointer; flex: 1;">
+                    <strong>Check Pauper Legality</strong>
+                    <small style="display: block; color: var(--text-muted); margin-top: 4px;">
+                      When enabled, decks will be validated against Pauper format rules
+                    </small>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Current Ban List -->
+            <div class="banlist-display">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                <h3>Current Banned Cards</h3>
+                <button class="btn btn-danger" id="remove-all-banlist-btn" style="background: var(--danger); color: white; padding: 0.5rem 1rem; font-size: 0.9rem;">🗑️ Remove All</button>
+              </div>
+              <div id="banlist-cards" class="banlist-cards"></div>
+              <div id="banlist-error" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tournaments Tab Content -->
+        <div id="tournaments-tab" class="admin-tab-content hidden">
+          <div class="section-header">
+            <h2>🏆 Manage Tournaments</h2>
+            <p>Create a tournament and share its submission link</p>
+          </div>
+
+          <div class="banlist-container">
+            <div class="banlist-form">
+              <h3>Create Tournament</h3>
+              <div class="form-group">
+                <input
+                  type="text"
+                  id="new-tournament-name"
+                  class="form-input"
+                  placeholder="Tournament name"
+                >
+              </div>
+              <div class="form-group">
+                <label for="new-tournament-banner">Banner Image URL <span style="opacity: 0.6;">(optional)</span></label>
+                <input
+                  type="url"
+                  id="new-tournament-banner"
+                  class="form-input"
+                  placeholder="https://example.com/banner.jpg"
+                >
+                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">Paste a URL or upload an image below</small>
+              </div>
+              <div class="form-group">
+                <label for="new-tournament-banner-file">Or Upload Image</label>
+                <input
+                  type="file"
+                  id="new-tournament-banner-file"
+                  class="form-input"
+                  accept="image/*"
+                >
+                <small style="color: var(--text-muted); display: block; margin-top: var(--spacing-sm);">PNG, JPG, GIF, WebP (max 5MB)</small>
+              </div>
+              <button class="btn btn-primary" id="create-tournament-btn">➕ Create</button>
+              <div id="tournament-create-status" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
+            </div>
+
+            <div class="banlist-display">
+              <h3>Existing Tournaments</h3>
+              <div id="tournaments-list" class="banlist-cards"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Fullscreen Deck Modal -->
+  <div id="deck-modal" class="deck-modal hidden">
+    <div class="deck-modal-content">
+      <button class="modal-close-btn" id="modal-close-btn">✕</button>
+      <div class="modal-header">
+        <h2 id="modal-player-name"></h2>
+        <p id="modal-verification-code"></p>
+      </div>
+      <div id="modal-deck-content" class="modal-deck-content"></div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="delete-confirmation-modal" class="deck-modal hidden">
+    <div class="deck-modal-content" style="max-width: 400px; margin: auto;">
+      <div class="modal-header">
+        <h2>Delete Player?</h2>
+      </div>
+      <div style="padding: var(--spacing-lg); text-align: center;">
+        <p id="delete-confirmation-text" style="color: var(--text-secondary); margin-bottom: var(--spacing-lg);"></p>
+        <p style="color: var(--danger); font-size: 0.9rem; margin-bottom: var(--spacing-lg);">This action cannot be undone.</p>
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button class="btn btn-secondary" id="cancel-delete-btn" style="flex: 1;">Cancel</button>
+          <button class="btn btn-danger" id="confirm-delete-btn" style="flex: 1; background: var(--danger); color: white;">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tournament Delete Confirmation Modal -->
+  <div id="tournament-delete-modal" class="deck-modal hidden">
+    <div class="deck-modal-content" style="max-width: 450px; margin: auto;">
+      <div class="modal-header">
+        <h2>Delete Tournament?</h2>
+      </div>
+      <div style="padding: var(--spacing-lg);">
+        <p id="tournament-delete-text" style="color: var(--text-secondary); margin-bottom: var(--spacing-md);"></p>
+        <p style="color: var(--danger); font-size: 0.9rem; margin-bottom: var(--spacing-lg);">⚠️ This will NOT delete player submissions, but the tournament entry will be removed.</p>
+        <div class="form-group" style="margin-bottom: var(--spacing-lg);">
+          <label for="tournament-delete-confirm">Type <strong>delete</strong> to confirm:</label>
+          <input type="text" id="tournament-delete-confirm" class="form-input" placeholder="delete">
+        </div>
+        <div style="display: flex; gap: var(--spacing-md);">
+          <button class="btn btn-secondary" id="cancel-tournament-delete-btn" style="flex: 1;">Cancel</button>
+          <button class="btn btn-danger" id="confirm-tournament-delete-btn" style="flex: 1; background: var(--danger); color: white;" disabled>Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

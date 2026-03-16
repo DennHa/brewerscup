@@ -1,0 +1,36 @@
+# Git ignore file
+# Exclude sensitive files from version control
+
+# ⚠️ SECURITY: Never commit credentials to version control
+# Use firebase-config.example.js as a template instead
+js/firebase-config.js
+js/admin.js
+
+# Node modules (if using npm)
+node_modules/
+npm-debug.log
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.bak
+*.log

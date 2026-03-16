@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pauper Spezl Registry - Deck Verification System</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <div class="brand-text">
+                    <h1>Pauper Spezl Registry</h1>
+                </div>
+            </div>
+            <!-- Hamburger Menu -->
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <!-- Mobile Menu -->
+            <div class="nav-menu" id="nav-menu">
+                <a href="index.html" class="nav-link active">Submit Your Deck</a>
+                <a href="check-status.html" class="nav-link">Check Your Deck</a>
+                <p>|</p>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </div>
+            <!-- Desktop Menu -->
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">Submit Your Deck</a>
+                <a href="check-status.html" class="nav-link">Check Your Deck</a>
+                <p>|</p>
+                <a href="admin.html" class="nav-link">Admin</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Tournament Banner -->
+            <div id="tournament-banner" class="tournament-banner hidden">
+              <img id="tournament-banner-img" src="" alt="Tournament Banner">
+            </div>
+
+            <div class="section-header">
+                <h2>Submit Your Deck</h2>
+                <p id="tournament-name" class="tournament-name hidden"></p>
+            </div>
+
+            <div class="form-container">
+                <!-- Player Info Section -->
+                <div class="form-group">
+                    <label for="playerName">Your Discordname/Nickname</label>
+                    <input type="text" id="playerName" placeholder="e.g., John Doe" required>
+                    <small>Used to identify your submission. We might publish this name online for statistics.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="playerEmail">Email <span style="opacity: 0.6;">(optional)</span></label>
+                    <input type="email" id="playerEmail" placeholder="your@email.com">
+                    <small>We'll use this to contact you about your deck</small>
+                </div>
+
+                <!-- Deck Input Section -->
+                <div class="form-group">
+                    <label for="mainboardText">Mainboard</label>
+                    <textarea id="mainboardText" placeholder="4x Lightning Bolt&#10;3x Counterspell&#10;2x Cancel&#10;23x Island" rows="14"></textarea>
+                    <small>Format: <strong>4x Card Name</strong> (one per line)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="sideboardText">Sideboard </label>
+                    <textarea id="sideboardText" placeholder="2x Surgical Extraction&#10;1x Scrapyard Recombiner" rows="6"></textarea>
+                    <small>Format: <strong>4x Card Name</strong> (one per line)</small>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="form-actions">
+                    <!-- <button id="preview-btn" class="btn btn-secondary">
+                        👁️ Preview
+                    </button> -->
+                    <button id="submit-btn" class="btn btn-primary">
+                        ✓ Submit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div id="preview-section" class="preview-section hidden">
+                <div class="preview-header">
+                    <h3>📊 Deck Preview</h3>
+                    <button class="close-btn" id="close-preview-btn">✕</button>
+                </div>
+                <div id="preview-stats" class="preview-stats"></div>
+                <div id="preview-deck" class="deck-list"></div>
+                <div id="preview-warnings" class="warnings hidden"></div>
+                <div id="preview-unfound" class="unfound-cards hidden"></div>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Processing your deck...</p>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="alert alert-error hidden"></div>
+
+            <!-- Success Message -->
+            <div id="success-section" class="success-section hidden">
+                <div class="success-container">
+                    <div class="success-icon">✓</div>
+                    <h2>Deck Verified Successfully!</h2>
+                    <p class="success-subtitle">Your deck has been stored in our system</p>
+                    
+                    <div class="verification-code-box">
+                        <p class="label">Your Verification Code</p>
+                        <div class="code-display" id="codeDisplay">ABC12345</div>
+                        <div style="display: flex; gap: var(--spacing-md); margin-top: var(--spacing-md);">
+                            <button class="btn btn-secondary" id="copy-code-btn" style="flex: 1;">📋 Copy</button>
+                        </div>
+                        <p class="help-text" style="margin-top: 1rem; color: #6B7280;">
+                            ✓ Code copied to clipboard! Your browser may offer to save this code.
+                        </p>
+                    </div>
+
+                    <div id="success-deck-info" class="deck-info-box"></div>
+
+                    <div class="success-actions">
+                        <!-- <button class="btn btn-primary" id="reset-form-btn">
+                            ➕ Submit Another Deck
+                        </button> -->
+                        <!-- <a href="check-status.html" class="btn btn-secondary">
+                            🔍 Check Other Decks
+                        </a> -->
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Progress Overlay -->
+        <div id="progress-overlay" class="progress-overlay hidden">
+            <div class="progress-content">
+                <div class="progress-header">
+                    <h3>Validating Your Deck</h3>
+                    <p class="progress-warning">⚠️ Please do not close or refresh this page</p>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+                <div class="progress-stats">
+                    <div class="progress-text">
+                        <span id="progress-count">0</span> / <span id="progress-total">0</span> cards checked
+                    </div>
+                    <div class="progress-current">
+                        <span id="progress-current-card">Initializing...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Removed external CDN for stability -->
+    
+    <!-- Firebase SDK and App Logic -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>

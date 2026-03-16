@@ -1,0 +1,582 @@
+/**
+ * Deck Validator Module
+ * 
+ * Handles deck parsing, normalization, and validation against ban list
+ */
+
+import { getCardFromScryfall, isPauperLegal } from './scryfall-api.js';
+import { db } from './firebase-config.js';
+import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+// Ban list - update this with your cards
+export const BAN_LIST = [
+  // Main banned cards
+  'Alms of the Vein',
+  'Ancestral Mask',
+  'Annoyed Altisaur',
+  'Armadillo Cloak',
+  'Avenging Hunter',
+  'Azure Fleet Admiral',
+  'Balustrade Spy',
+  'Basilisk Gate',
+  'Battle Screech',
+  'Blight Mamba',
+  'Blighted Agent',
+  'Blood Fountain',
+  'Bloodthrone Vampire',
+  'Boarding Party',
+  'Brave the Wilds',
+  'Campfire',
+  'Carrion Feeder',
+  'Choking Sands',
+  'Circle of Protection: Black',
+  'Circle of Protection: Blue',
+  'Circle of Protection: Green',
+  'Circle of Protection: Red',
+  'Circle of Protection: White',
+  'Cleansing Wildfire',
+  'Crimson Fleet Commodore',
+  'Crypt Rats',
+  'Cryptic Serpent',
+  'Drannith Healer',
+  'Drannith Stinger',
+  'Dread Return',
+  'Eagles of the North',
+  'Ephemerate',
+  'Ethereal Armor',
+  'Eviscerator\'s Insight',
+  'Exhume',
+  'Experimental Synthesizer',
+  'Fiery Temper',
+  'Fireblast',
+  'First Day of Class',
+  'Freed from the Real',
+  'Galvanic Alchemist',
+  'Gearseeker Serpent',
+  'Generous Ent',
+  'Glint Hawk',
+  'Glistener Elf',
+  'Gnaw to the Bone',
+  'Goblin Bushwhacker',
+  'Goblin Tomb Raider',
+  'Goliath Paladin',
+  'Grab the Prize',
+  'Guardian of the Guildpact',
+  'Guardians\' Pledge',
+  'Gurmag Angler',
+  'Guttersnipe',
+  'Icequake',
+  'Ichor Wellspring',
+  'Ichorclaw Myr',
+  'Infectious Inquiry',
+  'Kenku Artificer',
+  'Kessig Flamebreather',
+  'Kiln Fiend',
+  'Kor Skyfisher',
+  'Krark-Clan Shaman',
+  'Lava Dart',
+  'Lead the Stampede',
+  'Lórien Revealed',
+  'Lotleth Giant',
+  'Lotus Petal',
+  'Molten Rain',
+  'Moment\'s Peace',
+  'Moon-Circuit Hacker',
+  'Mortician Beetle',
+  'Murmuring Mystic',
+  'Muscle Sliver',
+  'Mwonvuli Acid-Moss',
+  'Myr Enforcer',
+  'Ninja of the Deep Hours',
+  'Oliphaunt',
+  'Palace Sentinels',
+  'Pillage',
+  'Predatory Sliver',
+  'Priest of Titania',
+  'Prismatic Strands',
+  'Prologue to Phyresis',
+  'Quirion Ranger',
+  'Rally at the Hornburg',
+  'Rally the Peasants',
+  'Rancid Earth',
+  'Rancor',
+  'Reckoner\'s Bargain',
+  'Refurbished Familiar',
+  'Rune of Protection: Black',
+  'Rune of Protection: Blue',
+  'Rune of Protection: Green',
+  'Rune of Protection: Red',
+  'Rune of Protection: White',
+  'Sleep of the Dead',
+  'Sneaky Snacker',
+  'Spellstutter Sprite',
+  'Stinkweed Imp',
+  'Stone Rain',
+  'Sunscape Familiar',
+  'Thermokarst',
+  'Thorn of the Black Rose',
+  'Thornscape Familiar',
+  'Timberwatch Elf',
+  'Tireless Tribe',
+  'Tolarian Terror',
+  'Trailblazer\'s Torch',
+  'Troll of Khazad-dûm',
+  'Urza\'s Tower',
+  'Utopia Sprawl',
+  'Weather the Storm',
+  'Wellwisher',
+  'Wild Growth',
+  'Winding Way',
+  'Writhing Chrysalis',
+  // Sideboard banned cards
+  'Aarakocra Sneak',
+  'Adriana\'s Valor',
+  'Aerialephant',
+  'All That Glitters',
+  'Arcum\'s Astrolabe',
+  'Assemble the Rank and Vile',
+  'Atog',
+  'Basking Broodscale',
+  'Bonder\'s Ornament',
+  'Brago\'s Favor',
+  'Carnival Carnivore',
+  'Chatterstorm',
+  'Chicken Troupe',
+  'Cloud of Faeries',
+  'Cloudpost',
+  'Coming Attraction',
+  'Command Performance',
+  'Cranial Plating',
+  'Cranial Ram',
+  'Daze',
+  'Deadbeat Attendant',
+  'Deadly Dispute',
+  'Disciple of the Vault',
+  'Draconian Gate-Bot',
+  'Empty the Warrens',
+  'Fall from Favor',
+  'Finishing Move',
+  'Frantic Search',
+  'Galvanic Relay',
+  'Gitaxian Probe',
+  'Glitterflitter',
+  'Grapeshot',
+  'Gush',
+  'High Tide',
+  'Hired Heist',
+  'Hymn to Tourach',
+  'Immediate Action',
+  'Incendiary Dissent',
+  'Invigorate',
+  'Kuldotha Rebirth',
+  'Line Cutter',
+  'Minotaur de Force',
+  'Monastery Swiftspear',
+  'Muzzio\'s Preparations',
+  'Mystic Sanctuary',
+  'Natural Unity',
+  'Peregrine Drake',
+  'Petting Zookeeper',
+  'Pradesh Gypsies',
+  'Prize Wall',
+  'Rad Rascal',
+  'Ride Guide',
+  'Robo-Piñata',
+  'Seasoned Buttoneer',
+  'Secrets of Paradise',
+  'Sentinel Dispatch',
+  'Sinkhole',
+  'Sojourner\'s Companion',
+  'Soul Swindler',
+  'Step Right Up',
+  'Stiltstrider',
+  'Stirring Bard',
+  'Stone-Throwing Devils',
+  'Temporal Fissure',
+  'Ticketomaton',
+  'Treasure Cruise',
+  'Underdark Explorer',
+  'Vicious Battlerager'
+];
+
+/**
+ * Parse deck from text format
+ * Supports formats like: "4x Card Name" or "4 Card Name"
+ * Separates mainboard and sideboard with "Sideboard" marker
+ * @param {string} deckText - Raw deck list text
+ * @returns {Object} {mainboard: Array, sideboard: Array}
+ */
+export function parseDecklistText(deckText) {
+  console.log('🔍 Parsing deck text...');
+  const lines = deckText.split('\n').map(line => line.trim()).filter(line => line);
+  const mainboard = [];
+  const sideboard = [];
+  let currentSection = mainboard; // Start with mainboard
+
+  for (const line of lines) {
+    // Check if this line is the sideboard marker
+    if (line.toUpperCase() === 'SIDEBOARD') {
+      currentSection = sideboard;
+      console.log('📝 Switching to sideboard section');
+      continue;
+    }
+    
+    // Skip empty lines and comments
+    if (!line || line.startsWith('//')) continue;
+
+    // Match patterns like "4x Card Name", "4X Card Name", "4 x Card Name", or "4 Card Name"
+    const match = line.match(/^(\d+)\s*[xX]?\s+(.+)$/);
+    
+    if (match) {
+      const quantity = parseInt(match[1], 10);
+      let cardName = match[2].trim();
+      
+      // Remove edition information in brackets or parentheses
+      // Examples: "Lightning Bolt (A25)" → "Lightning Bolt"
+      //           "Island [MH2]" → "Island"
+      cardName = cardName.replace(/\s*[\(\[].*?[\)\]]/g, '').trim();
+      
+      // Skip category labels
+      const labels = ['LANDS', 'CREATURES', 'INSTANTS', 'SORCERIES', 'ARTIFACTS', 'ENCHANTMENTS', 'PLANESWALKERS'];
+      if (!labels.includes(cardName.toUpperCase())) {
+        currentSection.push({
+          quantity,
+          name: cardName
+        });
+      }
+    }
+  }
+
+  console.log(`✅ Parsed: ${mainboard.length} mainboard cards, ${sideboard.length} sideboard cards`);
+  return { mainboard, sideboard };
+}
+
+/**
+ * Extract deck data from Archidekt URL
+ * @param {string} url - Archidekt URL
+ * @returns {Promise<Object>} Deck data
+ */
+export async function parseArchidektURL(url) {
+  try {
+    // Extract deck ID from Archidekt URL
+    const match = url.match(/archidekt\.com\/decks\/(\d+)/);
+    if (!match) {
+      throw new Error('Invalid Archidekt URL format');
+    }
+
+    const deckId = match[1];
+    const apiUrl = `https://archidekt.com/api/decks/${deckId}/`;
+    
+    const response = await fetch(apiUrl);
+    if (!response.ok) {
+      throw new Error('Failed to fetch deck from Archidekt');
+    }
+
+    const data = await response.json();
+    const deck = [];
+
+    // Parse cards from Archidekt format
+    if (data.cards) {
+      for (const card of data.cards) {
+        if (card.card && card.card.name) {
+          deck.push({
+            quantity: card.quantity,
+            name: card.card.name
+          });
+        }
+      }
+    }
+
+    return {
+      success: true,
+      deck,
+      source: 'archidekt'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch Archidekt deck'
+    };
+  }
+}
+
+/**
+ * Parse deck from URL (Archidekt only)
+ * @param {string} deckUrl - URL to the deck
+ * @returns {Promise<Object>} Parsed deck data
+ */
+export async function parseDeckFromURL(deckUrl) {
+  if (deckUrl.includes('archidekt.com')) {
+    return parseArchidektURL(deckUrl);
+  } else {
+    return {
+      success: false,
+      error: 'Only Archidekt URLs are supported. You can also paste a deck list directly.'
+    };
+  }
+}
+
+/**
+ * Normalize all card names in a deck using Scryfall API
+ * Processes cards in parallel batches for speed
+ * @param {Array} deck - Deck array with card objects
+ * @param {Function} onProgress - Callback function(current, total, cardName)
+ * @returns {Promise<Array>} Deck with normalized names
+ */
+export async function normalizeDeckNames(deck, onProgress = null) {
+  console.log(`📍 Normalizing ${deck.length} cards with Scryfall API...`);
+  const normalizedDeck = [];
+  let successCount = 0;
+  let failureCount = 0;
+
+  // Process cards in parallel batches (5 at a time to avoid rate limits)
+  const batchSize = 5;
+  for (let i = 0; i < deck.length; i += batchSize) {
+    const batch = deck.slice(i, i + batchSize);
+    
+    // Process batch in parallel
+    const batchResults = await Promise.all(
+      batch.map(async (card) => {
+        const cardData = await getCardFromScryfall(card.name);
+        
+        // Update progress
+        const progressIndex = i + batch.indexOf(card) + 1;
+        if (onProgress) {
+          onProgress(progressIndex, deck.length, card.name);
+        }
+        
+        if (cardData.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+        
+        return {
+          quantity: card.quantity,
+          originalName: card.name,
+          normalizedName: cardData.success ? cardData.oracleName : null,
+          scryfallId: cardData.scryfallId || null,
+          error: cardData.error || null
+        };
+      })
+    );
+    
+    normalizedDeck.push(...batchResults);
+  }
+
+  console.log(`✅ Scryfall normalization complete: ${successCount} found, ${failureCount} not found`);
+  return normalizedDeck;
+}
+
+// Cache for ban list to avoid repeated Firebase calls
+let banListCache = null;
+let banListCacheTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get current ban list from Firebase or fallback to hardcoded list
+ * @param {string} tournamentId - Optional tournament ID to get tournament-specific ban list
+ * @returns {Promise<Array>} Array of banned card names
+ */
+export async function getBanList(tournamentId = null) {
+  // Create cache key based on tournament
+  const cacheKey = tournamentId || 'default';
+  
+  // Return cached version if still valid
+  if (banListCache && Date.now() - banListCacheTime < CACHE_DURATION && banListCache.tournamentId === cacheKey) {
+    console.log(`🚫 Using cached ban list for ${cacheKey}`);
+    return banListCache.cards;
+  }
+
+  try {
+    let banList = BAN_LIST;
+    
+    if (tournamentId) {
+      // Try to get tournament-specific ban list
+      console.log(`🚫 Fetching ban list for tournament: ${tournamentId}`);
+      const tournamentDoc = await getDoc(doc(db, 'tournaments', tournamentId));
+      
+      if (tournamentDoc.exists()) {
+        const tournamentData = tournamentDoc.data();
+        banList = tournamentData.banList || BAN_LIST;
+        console.log(`✅ Tournament-specific ban list loaded: ${banList.length} cards`);
+      } else {
+        console.warn(`⚠️ Tournament ${tournamentId} not found, using default ban list`);
+      }
+    } else {
+      // Get global ban list
+      console.log('🚫 Fetching global ban list from Firebase');
+      const banListDoc = await getDoc(doc(db, 'admin', 'banlist'));
+      
+      if (banListDoc.exists()) {
+        const data = banListDoc.data();
+        banList = data.cards || BAN_LIST;
+        console.log('✅ Global ban list loaded from Firebase:', banList.length, 'cards');
+      } else {
+        console.warn('⚠️ Global ban list not found in Firebase, using hardcoded list');
+      }
+    }
+    
+    // Update cache
+    banListCache = {
+      tournamentId: cacheKey,
+      cards: banList
+    };
+    banListCacheTime = Date.now();
+    return banList;
+    
+  } catch (error) {
+    console.error('❌ Error fetching ban list from Firebase:', error);
+    console.warn('⚠️ Falling back to hardcoded ban list');
+    banListCache = {
+      tournamentId: cacheKey,
+      cards: BAN_LIST
+    };
+    return BAN_LIST;
+  }
+}
+
+/**
+ * Update the ban list in Firebase
+ * @param {Array} newBanList - New list of banned cards
+ * @param {string} tournamentId - Optional tournament ID for tournament-specific ban list
+ * @returns {Promise<void>}
+ */
+export async function updateBanList(newBanList, tournamentId = null) {
+  console.log(`🚫 Updating ban list to Firebase (${tournamentId || 'global'}):`, newBanList.length, 'cards');
+  
+  try {
+    if (tournamentId) {
+      // Update tournament-specific ban list
+      const tournamentRef = doc(db, 'tournaments', tournamentId);
+      await setDoc(tournamentRef, {
+        banList: newBanList,
+        banListUpdatedAt: new Date()
+      }, { merge: true });
+      console.log(`✅ Tournament ${tournamentId} ban list updated successfully`);
+    } else {
+      // Update global ban list
+      await setDoc(doc(db, 'admin', 'banlist'), {
+        cards: newBanList,
+        updatedAt: new Date(),
+        count: newBanList.length
+      });
+      console.log('✅ Global ban list updated successfully in Firebase');
+    }
+    
+    // Clear cache
+    banListCache = null;
+    banListCacheTime = 0;
+    
+  } catch (error) {
+    console.error('❌ Error updating ban list in Firebase:', error);
+    throw error;
+  }
+}
+
+/**
+ * Clear ban list cache (useful after updates)
+ */
+export function clearBanListCache() {
+  console.log('🔄 Clearing ban list cache');
+  banListCache = null;
+  banListCacheTime = 0;
+}
+
+/**
+ * Check if any cards in the deck are on the ban list
+ * @param {Array} deck - Normalized deck array
+ * @param {Array} banlist - Array of banned card names
+ * @returns {Object} Validation result with banned cards info
+ */
+export function validateAgainstBanlist(deck, banlist = BAN_LIST) {
+  const bannedInDeck = [];
+  // Normalize ban list: lowercase, trim, and collapse whitespace
+  const normalizeCardName = (name) => {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' '); // Collapse multiple spaces into one
+  };
+  
+  const banlistNormalized = banlist.map(normalizeCardName);
+
+  for (const card of deck) {
+    // Get the card name and normalize: trim, lowercase, collapse whitespace
+    const cardName = normalizeCardName(card.normalizedName || card.originalName || '');
+    
+    // Check if this card is banned
+    if (cardName && banlistNormalized.includes(cardName)) {
+      bannedInDeck.push({
+        name: card.normalizedName || card.originalName,
+        quantity: card.quantity,
+        originalName: card.originalName
+      });
+    }
+  }
+
+  return {
+    valid: bannedInDeck.length === 0,
+    bannedCards: bannedInDeck,
+    totalBannedQuantity: bannedInDeck.reduce((sum, card) => sum + card.quantity, 0)
+  };
+}
+
+/**
+ * Calculate total deck size
+ * @param {Array} deck - Deck array
+ * @returns {number} Total number of cards
+ */
+export function calculateDeckSize(deck) {
+  return deck.reduce((total, card) => total + card.quantity, 0);
+}
+
+/**
+ * Check deck for Pauper legality via Scryfall
+ * @param {Array} deck - Deck array with card objects
+ * @returns {Promise<Object>} Legality check result with illegal cards
+ */
+export async function validatePauperLegality(deck) {
+  const illegalCards = [];
+  const checkedCards = new Map(); // Cache results to avoid duplicate API calls
+  
+  for (const card of deck) {
+    const cardName = card.normalizedName || card.originalName;
+    
+    // Skip if we've already checked this card name
+    if (checkedCards.has(cardName)) {
+      const legalityResult = checkedCards.get(cardName);
+      if (!legalityResult.isLegal) {
+        illegalCards.push({
+          name: cardName,
+          quantity: card.quantity,
+          originalName: card.originalName,
+          status: legalityResult.status
+        });
+      }
+      continue;
+    }
+    
+    try {
+      const legalityResult = await isPauperLegal(cardName);
+      checkedCards.set(cardName, legalityResult);
+      
+      if (legalityResult.success && !legalityResult.isLegal) {
+        illegalCards.push({
+          name: cardName,
+          quantity: card.quantity,
+          originalName: card.originalName,
+          status: legalityResult.status
+        });
+      }
+    } catch (error) {
+      console.error(`Error checking Pauper legality for "${cardName}":`, error);
+    }
+  }
+  
+  return {
+    valid: illegalCards.length === 0,
+    illegalCards,
+    totalIllegalQuantity: illegalCards.reduce((sum, card) => sum + card.quantity, 0)
+  };
+}
