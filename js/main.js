@@ -3,7 +3,7 @@
 // Handles the main index.html page for deck submission
 
 import { db } from './firebase-config.js';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+import { collection, addDoc, serverTimestamp, doc, getDoc, getDocs, query } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
 import {
   parseDecklistText,
   parseDeckFromURL,
@@ -124,8 +124,23 @@ function updateProgressBar(current, total, currentCard = '') {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('📄 DOMContentLoaded - setting up event listeners');
 
-  initTournamentContext();
+  // Check if tournament is in URL
+  const tournamentSlug = getTournamentSlugFromUrl();
   
+  if (!tournamentSlug) {
+    // No tournament in URL - show selector modal
+    showTournamentSelector();
+  } else {
+    // Tournament in URL - initialize normally
+    initTournamentContext();
+    attachFormListeners();
+  }
+});
+
+/**
+ * Attach event listeners to form elements
+ */
+function attachFormListeners() {
   // Preview button
   const previewBtn = document.getElementById('preview-btn');
   if (previewBtn) {
@@ -161,16 +176,88 @@ document.addEventListener('DOMContentLoaded', () => {
       copyCodToClipboard();
     });
   }
-  
-  // Reset form button
-  const resetFormBtn = document.getElementById('reset-form-btn');
-  if (resetFormBtn) {
-    resetFormBtn.addEventListener('click', () => {
-      console.log('🖱️ Reset form button clicked');
-      resetForm();
+}
+
+/**
+ * Load tournaments from Firestore and show selector modal
+ */
+async function showTournamentSelector() {
+  try {
+    console.log('🏆 Loading tournaments...');
+    const modal = document.getElementById('tournament-modal');
+    const tourList = document.getElementById('tournament-list');
+    
+    if (!modal || !tourList) {
+      console.error('Tournament modal not found in DOM');
+      return;
+    }
+
+    // Fetch tournaments from Firestore
+    const tournamentsSnap = await getDocs(collection(db, 'tournaments'));
+    const tournaments = [];
+    
+    tournamentsSnap.forEach(doc => {
+      tournaments.push({
+        id: doc.id,
+        name: doc.data().name || doc.id,
+        ...doc.data()
+      });
     });
+
+    // Sort by name
+    tournaments.sort((a, b) => a.name.localeCompare(b.name));
+
+    // Always add "Global" (no tournament) option
+    tournaments.unshift({
+      id: 'global',
+      name: '🌍 Global Submissions',
+      description: 'Submit outside any specific tournament'
+    });
+
+    console.log(`📋 Found ${tournaments.length} tournaments`);
+
+    // Render tournament items
+    if (tournaments.length === 0) {
+      tourList.innerHTML = '<p>No tournaments available</p>';
+    } else {
+      tourList.innerHTML = tournaments.map(tour => `
+        <div class="tournament-item" onclick="selectTournament('${escapeHtml(tour.id)}')">
+          <h3>${escapeHtml(tour.name)}</h3>
+          ${tour.description ? `<p>${escapeHtml(tour.description)}</p>` : ''}
+        </div>
+      `).join('');
+    }
+
+    // Show modal
+    modal.classList.remove('hidden');
+    console.log('✅ Tournament selector ready');
+
+  } catch (error) {
+    console.error('❌ Error loading tournaments:', error);
+    showError('Failed to load tournaments. Please try again.');
   }
-});
+}
+
+/**
+ * Handle tournament selection
+ */
+window.selectTournament = function(tournamentId) {
+  console.log(`🎯 Selected tournament: ${tournamentId}`);
+  
+  const modal = document.getElementById('tournament-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+  }
+
+  // Build URL with tournament parameter
+  let newUrl = window.location.pathname;
+  if (tournamentId !== 'global') {
+    newUrl += `?t=${encodeURIComponent(tournamentId)}`;
+  }
+
+  // Navigation to URL with tournament
+  window.location.href = newUrl;
+};
 
 function getTournamentSlugFromUrl() {
   const params = new URLSearchParams(window.location.search);
