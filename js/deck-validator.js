@@ -491,15 +491,22 @@ export function clearBanListCache() {
  */
 export function validateAgainstBanlist(deck, banlist = BAN_LIST) {
   const bannedInDeck = [];
-  // Normalize ban list: lowercase and trim each card name
-  const banlistLower = banlist.map(card => card.trim().toLowerCase());
+  // Normalize ban list: lowercase, trim, and collapse whitespace
+  const normalizeCardName = (name) => {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' '); // Collapse multiple spaces into one
+  };
+  
+  const banlistNormalized = banlist.map(normalizeCardName);
 
   for (const card of deck) {
-    // Get the card name and normalize: trim and lowercase
-    const cardName = (card.normalizedName || card.originalName || '').trim().toLowerCase();
+    // Get the card name and normalize: trim, lowercase, collapse whitespace
+    const cardName = normalizeCardName(card.normalizedName || card.originalName || '');
     
     // Check if this card is banned
-    if (cardName && banlistLower.includes(cardName)) {
+    if (cardName && banlistNormalized.includes(cardName)) {
       bannedInDeck.push({
         name: card.normalizedName || card.originalName,
         quantity: card.quantity,
