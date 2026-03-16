@@ -767,6 +767,22 @@ window.resetForm = function() {
   hideError();
 };
 
+/**
+ * Submit another deck while preserving tournament context in URL
+ */
+window.submitAnotherDeck = function() {
+  // Get current tournament slug from URL
+  const tournamentSlug = getTournamentSlugFromUrl();
+  
+  // Build URL with tournament parameter if it exists
+  const baseUrl = window.location.pathname;
+  if (tournamentSlug) {
+    window.location.href = `${baseUrl}?t=${encodeURIComponent(tournamentSlug)}`;
+  } else {
+    window.location.href = baseUrl;
+  }
+};
+
 
 
 /**
