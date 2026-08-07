@@ -137,6 +137,12 @@ body {
   flex-shrink: 0;
 }
 
+.brand-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
 .navbar-brand .brand-text h1 {
   font-size: 1.25rem;
   font-weight: 700;
