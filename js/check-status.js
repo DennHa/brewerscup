@@ -176,11 +176,20 @@ window.toggleEditMode = function() {
   const modal = document.getElementById('edit-deck-modal');
   const textarea = document.getElementById('edit-deck-textarea');
   
-  // Populate textarea with current decklist
+  // Populate mainboard textarea with current decklist
   const deckText = currentDeckData.decklist
     .map(card => `${card.quantity}x ${card.name || card.originalName}`)
     .join('\n');
   textarea.value = deckText;
+
+  // Populate sideboard textarea with current sideboard
+  const sideboardTextarea = document.getElementById('edit-sideboard-textarea');
+  if (sideboardTextarea) {
+    const sideboardText = (currentDeckData.sideboard || [])
+      .map(card => `${card.quantity}x ${card.name || card.originalName}`)
+      .join('\n');
+    sideboardTextarea.value = sideboardText;
+  }
   
   // Hide revalidation results
   document.getElementById('modal-revalidation-results').classList.add('hidden');
@@ -218,7 +227,7 @@ window.revalidateDeck = async function() {
       return;
     }
 
-    // Parse the deck
+    // Parse the mainboard
     const lines = deckText.split('\n').filter(l => l.trim());
     const decklist = [];
 
@@ -255,6 +264,31 @@ window.revalidateDeck = async function() {
       });
     }
 
+    // Parse the sideboard
+    const sideboardTextarea = document.getElementById('edit-sideboard-textarea');
+    const sideboardText = sideboardTextarea ? sideboardTextarea.value.trim() : '';
+    const sideboard = [];
+
+    if (sideboardText) {
+      for (const line of sideboardText.split('\n').filter(l => l.trim())) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || trimmedLine.startsWith('//')) continue;
+
+        const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
+        if (!match) {
+          editError.textContent = `Invalid sideboard format on line: "${line}". Use format: "2x Island"`;
+          editError.classList.remove('hidden');
+          return;
+        }
+
+        const quantity = parseInt(match[1]);
+        const cardName = match[2].trim();
+        if (quantity < 1) continue;
+
+        sideboard.push({ quantity, originalName: cardName, name: cardName });
+      }
+    }
+
     // Show loading
     editError.textContent = 'Validating deck...';
     editError.classList.remove('hidden');
@@ -262,6 +296,7 @@ window.revalidateDeck = async function() {
 
     // Normalize deck names
     const normalizedDecklist = await normalizeDeckNames(decklist);
+    const normalizedSideboard = sideboard.length > 0 ? await normalizeDeckNames(sideboard) : [];
     
     // Validate deck
     const banList = await getBanList();
@@ -280,7 +315,7 @@ window.revalidateDeck = async function() {
     };
 
     // Display revalidation results
-    displayRevalidationResults(normalizedDecklist, combinedValidation);
+    displayRevalidationResults(normalizedDecklist, normalizedSideboard, combinedValidation);
 
     editError.classList.add('hidden');
 
@@ -296,7 +331,7 @@ window.revalidateDeck = async function() {
 /**
  * Display revalidation results
  */
-function displayRevalidationResults(decklist, validation) {
+function displayRevalidationResults(decklist, sideboard, validation) {
   console.log('📊 Displaying revalidation results');
   const resultsDiv = document.getElementById('modal-revalidation-results');
   const detailsDiv = document.getElementById('modal-revalidation-details');
@@ -336,7 +371,8 @@ function displayRevalidationResults(decklist, validation) {
   detailsDiv.innerHTML = detailsHtml;
 
   // Display updated deck list
-  const deckListHtml = decklist
+  let deckListHtml = '<h3>Updated Decklist</h3>';
+  deckListHtml += decklist
     .sort((a, b) => b.quantity - a.quantity)
     .map(card => {
       const isBanned = validation.bannedCards?.some(bc => 
@@ -352,7 +388,20 @@ function displayRevalidationResults(decklist, validation) {
     })
     .join('');
 
-  deckListDiv.innerHTML = `<h3>Updated Decklist</h3>` + deckListHtml;
+  if (sideboard && sideboard.length > 0) {
+    deckListHtml += '<h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md); padding-top: var(--spacing-lg); border-top: 1px solid var(--border);">Sideboard</h4>';
+    deckListHtml += sideboard
+      .sort((a, b) => b.quantity - a.quantity)
+      .map(card => `
+        <div class="deck-card-item sideboard-card-item">
+          <span class="deck-card-qty">${card.quantity}x</span>
+          <span class="deck-card-name">${escapeHtml(card.name || card.originalName)}</span>
+        </div>
+      `)
+      .join('');
+  }
+
+  deckListDiv.innerHTML = deckListHtml;
   resultsDiv.classList.remove('hidden');
 
   // Show save button, hide revalidate button
@@ -389,8 +438,27 @@ window.saveUpdatedDeck = async function() {
       decklist.push({ quantity, originalName: cardName, name: cardName });
     }
 
+    // Parse sideboard
+    const sideboardTextarea = document.getElementById('edit-sideboard-textarea');
+    const sideboardText = sideboardTextarea ? sideboardTextarea.value.trim() : '';
+    const sideboard = [];
+
+    if (sideboardText) {
+      for (const line of sideboardText.split('\n').filter(l => l.trim())) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine || trimmedLine.startsWith('//')) continue;
+        const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
+        if (!match) continue;
+        const quantity = parseInt(match[1]);
+        const cardName = match[2].trim();
+        if (quantity < 1) continue;
+        sideboard.push({ quantity, originalName: cardName, name: cardName });
+      }
+    }
+
     // Normalize and validate
     const normalizedDecklist = await normalizeDeckNames(decklist);
+    const normalizedSideboard = sideboard.length > 0 ? await normalizeDeckNames(sideboard) : [];
     const validation = validateAgainstBanlist(normalizedDecklist);
     const pauperValidation = await validatePauperLegality(normalizedDecklist);
     const deckSize = decklist.reduce((sum, card) => sum + card.quantity, 0);
@@ -399,6 +467,7 @@ window.saveUpdatedDeck = async function() {
     const deckRef = doc(db, 'decks', currentDeckId);
     await updateDoc(deckRef, {
       decklist: normalizedDecklist,
+      sideboard: normalizedSideboard,
       deckSize,
       isValid: validation.valid && pauperValidation.valid,
       bannedCards: validation.bannedCards || [],
@@ -409,6 +478,7 @@ window.saveUpdatedDeck = async function() {
 
     // Update current data
     currentDeckData.decklist = normalizedDecklist;
+    currentDeckData.sideboard = normalizedSideboard;
     currentDeckData.deckSize = deckSize;
     currentDeckData.isValid = validation.valid && pauperValidation.valid;
     currentDeckData.bannedCards = validation.bannedCards || [];

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ban List Update Test Suite</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: #58a6ff;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #30363d;
+      padding-bottom: 10px;
+    }
+    
+    h2 {
+      color: #79c0ff;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .test-group {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-case {
+      background: #0d1117;
+      border-left: 4px solid #30363d;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 3px;
+    }
+    
+    .test-case.pass {
+      border-left-color: #3fb950;
+      background: rgba(63, 185, 80, 0.1);
+    }
+    
+    .test-case.fail {
+      border-left-color: #f85149;
+      background: rgba(248, 81, 73, 0.1);
+    }
+    
+    .test-case.running {
+      border-left-color: #d29922;
+      background: rgba(210, 153, 34, 0.1);
+    }
+    
+    .test-case.skipped {
+      border-left-color: #8b949e;
+      background: rgba(139, 148, 158, 0.1);
+    }
+    
+    .test-name {
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .pass .status-icon {
+      background: #3fb950;
+      color: white;
+    }
+    
+    .fail .status-icon {
+      background: #f85149;
+      color: white;
+    }
+    
+    .running .status-icon {
+      background: #d29922;
+      color: white;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .test-message {
+      font-size: 13px;
+      color: #8b949e;
+      margin-top: 5px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .test-output {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      padding: 10px;
+      margin-top: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      color: #79c0ff;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      background: #238636;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    
+    button:hover {
+      background: #2ea043;
+    }
+    
+    button:disabled {
+      background: #30363d;
+      cursor: not-allowed;
+    }
+    
+    .summary {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #30363d;
+    }
+    
+    .summary-row:last-child {
+      border-bottom: none;
+    }
+    
+    .summary-label {
+      color: #8b949e;
+    }
+    
+    .summary-value {
+      font-weight: 600;
+      color: #c9d1d9;
+    }
+    
+    .error-box {
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid #f85149;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 10px;
+      color: #f85149;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .success-box {
+      background: rgba(63, 185, 80, 0.1);
+      border: 1px solid #3fb950;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 10px;
+      color: #3fb950;
+      font-size: 13px;
+    }
+    
+    .warning-box {
+      background: rgba(210, 153, 34, 0.1);
+      border: 1px solid #d29922;
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 10px;
+      color: #d29922;
+      font-size: 13px;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    input {
+      flex: 1;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    
+    textarea {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      width: 100%;
+      min-height: 100px;
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚫 Ban List Update Test Suite</h1>
+    
+    <div class="controls">
+      <button onclick="runAllTests()">Run All Tests</button>
+      <button onclick="clearTestResults()">Clear Results</button>
+      <button onclick="exportTestResults()">Export Results</button>
+      <button onclick="testBanListSync()">Test Sync Issue</button>
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+      <div class="summary-row">
+        <span class="summary-label">Total Tests:</span>
+        <span class="summary-value" id="total-tests">0</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Passed:</span>
+        <span class="summary-value" style="color: #3fb950;" id="passed-tests">0</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Failed:</span>
+        <span class="summary-value" style="color: #f85149;" id="failed-tests">0</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label">Skipped:</span>
+        <span class="summary-value" style="color: #8b949e;" id="skipped-tests">0</span>
+      </div>
+    </div>
+
+    <!-- Test Results Container -->
+    <div id="test-results"></div>
+  </div>
+
+  <script type="module">
+    // Import the modules we're testing
+    import { BAN_LIST, getBanList, updateBanList, clearBanListCache } from '../js/deck-validator.js';
+    import { db } from '../js/firebase-config.js';
+    import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+    // Global test state
+    window.testState = {
+      results: [],
+      stats: { total: 0, passed: 0, failed: 0, skipped: 0 }
+    };
+
+    // Helper function to record test results
+    window.recordTest = function(name, status, message = '', output = '') {
+      const test = {
+        name,
+        status,
+        message,
+        output,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      window.testState.results.push(test);
+      window.testState.stats.total++;
+      window.testState.stats[status === 'pass' ? 'passed' : status === 'fail' ? 'failed' : 'skipped']++;
+      renderTestResult(test);
+      updateSummary();
+    };
+
+    // Render a single test result
+    window.renderTestResult = function(test) {
+      const resultsContainer = document.getElementById('test-results');
+      const testElement = document.createElement('div');
+      testElement.className = `test-case ${test.status}`;
+      
+      const statusEmoji = {
+        'pass': '✅',
+        'fail': '❌',
+        'running': '⏳',
+        'skipped': '⊘'
+      }[test.status];
+      
+      testElement.innerHTML = `
+        <div class="test-name">
+          <span class="status-icon">${statusEmoji}</span>
+          <span>${test.name}</span>
+        </div>
+        ${test.message ? `<div class="test-message">${escapeHtml(test.message)}</div>` : ''}
+        ${test.output ? `<div class="test-output">${escapeHtml(test.output)}</div>` : ''}
+      `;
+      
+      resultsContainer.appendChild(testElement);
+    };
+
+    // Update summary statistics
+    window.updateSummary = function() {
+      const summary = document.getElementById('summary');
+      summary.style.display = 'block';
+      document.getElementById('total-tests').textContent = window.testState.stats.total;
+      document.getElementById('passed-tests').textContent = window.testState.stats.passed;
+      document.getElementById('failed-tests').textContent = window.testState.stats.failed;
+      document.getElementById('skipped-tests').textContent = window.testState.stats.skipped;
+    };
+
+    // Helper to escape HTML
+    window.escapeHtml = function(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    };
+
+    // Test: getBanList returns an array
+    window.testGetBanListReturnsArray = async function() {
+      try {
+        clearBanListCache();
+        const banList = await getBanList();
+        if (Array.isArray(banList)) {
+          window.recordTest('getBanList() returns array', 'pass', 
+            `Retrieved ${banList.length} cards from ban list`);
+        } else {
+          window.recordTest('getBanList() returns array', 'fail',
+            `Expected array, got ${typeof banList}`);
+        }
+      } catch (e) {
+        window.recordTest('getBanList() returns array', 'fail', e.message);
+      }
+    };
+
+    // Test: Ban list contains expected structure
+    window.testBanListStructure = async function() {
+      try {
+        clearBanListCache();
+        const banList = await getBanList();
+        let validStructure = true;
+        let invalidCards = [];
+        
+        banList.forEach((card, idx) => {
+          if (typeof card !== 'string' || card.length === 0) {
+            validStructure = false;
+            invalidCards.push(`Index ${idx}: ${typeof card} - "${card}"`);
+          }
+        });
+        
+        if (validStructure) {
+          window.recordTest('Ban list structure (all strings, non-empty)', 'pass',
+            `All ${banList.length} cards are valid strings`);
+        } else {
+          window.recordTest('Ban list structure (all strings, non-empty)', 'fail',
+            `Found invalid cards: ${invalidCards.join('; ')}`);
+        }
+      } catch (e) {
+        window.recordTest('Ban list structure (all strings, non-empty)', 'fail', e.message);
+      }
+    };
+
+    // Test: Cache behavior
+    window.testCacheBehavior = async function() {
+      try {
+        clearBanListCache();
+        const start1 = performance.now();
+        const banList1 = await getBanList();
+        const time1 = performance.now() - start1;
+        
+        const start2 = performance.now();
+        const banList2 = await getBanList();
+        const time2 = performance.now() - start2;
+        
+        if (time2 < time1) {
+          window.recordTest('Ban list cache (cached call faster)', 'pass',
+            `First call: ${time1.toFixed(2)}ms, Cached call: ${time2.toFixed(2)}ms`);
+        } else {
+          window.recordTest('Ban list cache (cached call faster)', 'fail',
+            `Cache may not be working. First: ${time1.toFixed(2)}ms, Second: ${time2.toFixed(2)}ms`);
+        }
+      } catch (e) {
+        window.recordTest('Ban list cache (cached call faster)', 'fail', e.message);
+      }
+    };
+
+    // Test: updateBanList function exists and is callable
+    window.testUpdateBanListFunction = async function() {
+      try {
+        if (typeof updateBanList === 'function') {
+          window.recordTest('updateBanList() function exists', 'pass',
+            'Function is exported and callable');
+        } else {
+          window.recordTest('updateBanList() function exists', 'fail',
+            `Got ${typeof updateBanList}`);
+        }
+      } catch (e) {
+        window.recordTest('updateBanList() function exists', 'fail', e.message);
+      }
+    };
+
+    // Test: Can add single card
+    window.testAddSingleCard = async function() {
+      try {
+        clearBanListCache();
+        const initialBanList = await getBanList();
+        const testCard = `Test Card ${Date.now()}`;
+        const newList = [...initialBanList, testCard];
+        
+        await updateBanList(newList);
+        clearBanListCache();
+        
+        const updatedBanList = await getBanList();
+        
+        if (updatedBanList.includes(testCard)) {
+          window.recordTest('Can add single card to ban list', 'pass',
+            `Added "${testCard}" successfully`);
+        } else {
+          window.recordTest('Can add single card to ban list', 'fail',
+            `Card "${testCard}" not found in updated list. List: ${updatedBanList.join(', ')}`);
+        }
+      } catch (e) {
+        window.recordTest('Can add single card to ban list', 'fail', e.message);
+      }
+    };
+
+    // Test: Can add bulk cards
+    window.testAddBulkCards = async function() {
+      try {
+        clearBanListCache();
+        const initialBanList = await getBanList();
+        const bulkCards = [
+          `Bulk Card 1 ${Date.now()}`,
+          `Bulk Card 2 ${Date.now()}`,
+          `Bulk Card 3 ${Date.now()}`
+        ];
+        
+        const newList = [...initialBanList, ...bulkCards];
+        await updateBanList(newList);
+        clearBanListCache();
+        
+        const updatedBanList = await getBanList();
+        
+        const allPresent = bulkCards.every(card => updatedBanList.includes(card));
+        
+        if (allPresent) {
+          window.recordTest('Can add bulk cards to ban list', 'pass',
+            `Added ${bulkCards.length} cards successfully`);
+        } else {
+          const missing = bulkCards.filter(c => !updatedBanList.includes(c));
+          window.recordTest('Can add bulk cards to ban list', 'fail',
+            `Missing cards: ${missing.join(', ')}`);
+        }
+      } catch (e) {
+        window.recordTest('Can add bulk cards to ban list', 'fail', e.message);
+      }
+    };
+
+    // Test: Can remove card
+    window.testRemoveCard = async function() {
+      try {
+        clearBanListCache();
+        const banList = await getBanList();
+        
+        if (banList.length === 0) {
+          window.recordTest('Can remove card from ban list', 'skipped', 'Ban list is empty');
+          return;
+        }
+        
+        const cardToRemove = banList[0];
+        const newList = banList.filter(card => card !== cardToRemove);
+        
+        await updateBanList(newList);
+        clearBanListCache();
+        
+        const updatedBanList = await getBanList();
+        
+        if (!updatedBanList.includes(cardToRemove)) {
+          window.recordTest('Can remove card from ban list', 'pass',
+            `Removed "${cardToRemove}" successfully`);
+        } else {
+          window.recordTest('Can remove card from ban list', 'fail',
+            `Card "${cardToRemove}" still present in list`);
+        }
+      } catch (e) {
+        window.recordTest('Can remove card from ban list', 'fail', e.message);
+      }
+    };
+
+    // Test: Cache is cleared after update
+    window.testCacheClearing = async function() {
+      try {
+        clearBanListCache();
+        const banList1 = await getBanList();
+        
+        const testCard = `Cache Test ${Date.now()}`;
+        const newList = [...banList1, testCard];
+        await updateBanList(newList);
+        
+        // Cache should be cleared automatically
+        // If not, we'd get the old list
+        const banList2 = await getBanList();
+        
+        if (banList2.includes(testCard)) {
+          window.recordTest('Cache cleared after update', 'pass',
+            'New data available after update');
+        } else {
+          window.recordTest('Cache cleared after update', 'fail',
+            'Cache not cleared - old data returned after update');
+        }
+      } catch (e) {
+        window.recordTest('Cache cleared after update', 'fail', e.message);
+      }
+    };
+
+    // Test: Firebase write operations
+    window.testFirebaseWrite = async function() {
+      try {
+        const testData = {
+          cards: [`Test Card ${Date.now()}`],
+          updatedAt: new Date(),
+          count: 1
+        };
+        
+        await setDoc(doc(db, 'admin', 'banlist-test'), testData);
+        window.recordTest('Firebase write operations', 'pass',
+          'Successfully wrote test data to Firebase');
+      } catch (e) {
+        window.recordTest('Firebase write operations', 'fail',
+          `Firebase write failed: ${e.message}`);
+      }
+    };
+
+    // Test: Firebase read operations
+    window.testFirebaseRead = async function() {
+      try {
+        const docSnapshot = await getDoc(doc(db, 'admin', 'banlist'));
+        
+        if (docSnapshot.exists()) {
+          const data = docSnapshot.data();
+          window.recordTest('Firebase read operations', 'pass',
+            `Read ${data.cards?.length || 0} cards from Firebase`);
+        } else {
+          window.recordTest('Firebase read operations', 'fail',
+            'admin/banlist document does not exist in Firebase');
+        }
+      } catch (e) {
+        window.recordTest('Firebase read operations', 'fail',
+          `Firebase read failed: ${e.message}`);
+      }
+    };
+
+    // Master test runner
+    window.runAllTests = async function() {
+      console.log('🚀 Starting all tests...');
+      
+      await window.testGetBanListReturnsArray();
+      await window.testBanListStructure();
+      await window.testCacheBehavior();
+      await window.testUpdateBanListFunction();
+      await window.testFirebaseRead();
+      await window.testFirebaseWrite();
+      await window.testAddSingleCard();
+      await window.testAddBulkCards();
+      await window.testRemoveCard();
+      await window.testCacheClearing();
+      
+      console.log('✅ All tests completed');
+    };
+
+    // Clear results
+    window.clearTestResults = function() {
+      document.getElementById('test-results').innerHTML = '';
+      document.getElementById('summary').style.display = 'none';
+      window.testState = {
+        results: [],
+        stats: { total: 0, passed: 0, failed: 0, skipped: 0 }
+      };
+    };
+
+    // Export results as JSON
+    window.exportTestResults = function() {
+      const data = JSON.stringify(window.testState, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `banlist-tests-${new Date().toISOString()}.json`;
+      a.click();
+    };
+
+    // Diagnostic test for sync issues
+    window.testBanListSync = async function() {
+      console.log('🔍 Running ban list sync diagnostic...');
+      
+      try {
+        clearBanListCache();
+        
+        // Step 1: Get current ban list
+        console.log('Step 1: Fetching current ban list...');
+        const initialBanList = await getBanList();
+        console.log(`  - Retrieved ${initialBanList.length} cards`);
+        
+        // Step 2: Add a test card
+        console.log('Step 2: Adding test card...');
+        const testCard = `SYNC-TEST-${Date.now()}`;
+        const updatedList = [...initialBanList, testCard];
+        console.log(`  - Attempting to add: ${testCard}`);
+        
+        await updateBanList(updatedList);
+        console.log('  - Update call completed');
+        
+        // Step 3: Verify with cache cleared
+        console.log('Step 3: Verifying with fresh fetch...');
+        clearBanListCache();
+        const verifyList = await getBanList();
+        
+        if (verifyList.includes(testCard)) {
+          console.log(`  ✅ Card found in updated list!`);
+          window.recordTest('Ban list sync diagnostic', 'pass',
+            `Successfully verified sync after adding "${testCard}"`);
+        } else {
+          console.log(`  ❌ Card NOT found. Ban list may not be syncing.`);
+          console.log(`  - Expected card: ${testCard}`);
+          console.log(`  - Cards in list: ${verifyList.slice(0, 5).join(', ')}...`);
+          window.recordTest('Ban list sync diagnostic', 'fail',
+            `Added "${testCard}" but not found after refresh. Sync issue detected!`);
+        }
+      } catch (e) {
+        console.error('Sync diagnostic error:', e);
+        window.recordTest('Ban list sync diagnostic', 'fail', e.message);
+      }
+    };
+
+    // Make functions globally available
+    console.log('✅ Test suite loaded and ready');
+  </script>
+</body>
+</html>

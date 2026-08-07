@@ -102,10 +102,18 @@
       <div id="modal-edit-content" class="modal-deck-content">
         <div class="deck-section">
           <p style="color: var(--text-muted); margin-bottom: var(--spacing-md);">Enter each card on a new line with quantity (e.g., "2x Island")</p>
+          <label style="font-weight: 600; margin-bottom: var(--spacing-sm); display: block;">Mainboard</label>
           <textarea 
             id="edit-deck-textarea" 
             class="form-input" 
-            style="font-family: 'Courier New', monospace; height: 400px; resize: vertical;"
+            style="font-family: 'Courier New', monospace; height: 300px; resize: vertical;"
+          ></textarea>
+          <label style="font-weight: 600; margin-top: var(--spacing-md); margin-bottom: var(--spacing-sm); display: block;">Sideboard</label>
+          <textarea 
+            id="edit-sideboard-textarea" 
+            class="form-input" 
+            placeholder="Optional — enter sideboard cards here"
+            style="font-family: 'Courier New', monospace; height: 150px; resize: vertical;"
           ></textarea>
           <div id="edit-error" class="alert alert-error hidden" style="margin-top: var(--spacing-md);"></div>
         </div>
