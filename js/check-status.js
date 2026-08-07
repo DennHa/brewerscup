@@ -12,6 +12,102 @@ let currentDeckId = null;
 let currentDeckData = null;
 
 /**
+ * Parse edited mainboard + sideboard text from the edit modal.
+ *
+ * Supports both separate sideboard textarea entries and SIDEBOARD markers
+ * included inside the mainboard textarea.
+ */
+function parseEditedDeckInput(mainboardText, sideboardText) {
+  const mainboard = [];
+  const sideboard = [];
+
+  const parseLine = (line, lineLabel) => {
+    const trimmedLine = line.trim();
+    if (!trimmedLine || trimmedLine.startsWith('//')) {
+      return { skip: true };
+    }
+
+    const match = trimmedLine.match(/^(\d+)\s*[xX]?\s+(.+)$/);
+    if (!match) {
+      return {
+        error: `Invalid format on ${lineLabel}: "${line}". Use format: "2x Island"`
+      };
+    }
+
+    const quantity = parseInt(match[1], 10);
+    const cardName = match[2].trim();
+
+    if (quantity < 1) {
+      return {
+        error: `Invalid quantity on ${lineLabel}: "${line}". Quantity must be at least 1`
+      };
+    }
+
+    if (!cardName) {
+      return {
+        error: `Missing card name on ${lineLabel}: "${line}"`
+      };
+    }
+
+    return {
+      card: {
+        quantity,
+        originalName: cardName,
+        name: cardName
+      }
+    };
+  };
+
+  // Parse main textarea (can include SIDEBOARD marker).
+  let currentSection = 'mainboard';
+  for (const rawLine of mainboardText.split('\n')) {
+    const line = rawLine.trim();
+    if (line.toUpperCase() === 'SIDEBOARD') {
+      currentSection = 'sideboard';
+      continue;
+    }
+
+    const parsed = parseLine(rawLine, 'mainboard');
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    if (parsed.skip) {
+      continue;
+    }
+
+    if (currentSection === 'mainboard') {
+      mainboard.push(parsed.card);
+    } else {
+      sideboard.push(parsed.card);
+    }
+  }
+
+  // Parse sideboard textarea (always sideboard cards, ignore optional marker line).
+  for (const rawLine of sideboardText.split('\n')) {
+    const line = rawLine.trim();
+    if (line.toUpperCase() === 'SIDEBOARD') {
+      continue;
+    }
+
+    const parsed = parseLine(rawLine, 'sideboard');
+    if (parsed.error) {
+      return { error: parsed.error };
+    }
+    if (parsed.skip) {
+      continue;
+    }
+
+    sideboard.push(parsed.card);
+  }
+
+  if (mainboard.length === 0) {
+    return { error: 'Please enter at least one mainboard card' };
+  }
+
+  return { mainboard, sideboard };
+}
+
+/**
  * Check a deck by verification code
  */
 window.checkDeck = async function() {
@@ -218,6 +314,7 @@ window.cancelEdit = function() {
 window.revalidateDeck = async function() {
   try {
     const deckText = document.getElementById('edit-deck-textarea').value.trim();
+    const sideboardText = document.getElementById('edit-sideboard-textarea')?.value.trim() || '';
     const editError = document.getElementById('edit-error');
     editError.classList.add('hidden');
 
@@ -227,67 +324,15 @@ window.revalidateDeck = async function() {
       return;
     }
 
-    // Parse the mainboard
-    const lines = deckText.split('\n').filter(l => l.trim());
-    const decklist = [];
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      // Skip section markers and empty lines
-      if (trimmedLine.toUpperCase() === 'SIDEBOARD' || 
-          !trimmedLine || 
-          trimmedLine.startsWith('//')) {
-        continue;
-      }
-      
-      const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
-      if (!match) {
-        editError.textContent = `Invalid format on line: "${line}". Use format: "2x Island"`;
-        editError.classList.remove('hidden');
-        return;
-      }
-
-      const quantity = parseInt(match[1]);
-      const cardName = match[2].trim();
-
-      if (quantity < 1) {
-        editError.textContent = `Invalid quantity on line: "${line}". Quantity must be at least 1`;
-        editError.classList.remove('hidden');
-        return;
-      }
-
-      decklist.push({
-        quantity,
-        originalName: cardName,
-        name: cardName
-      });
+    const parsedDeck = parseEditedDeckInput(deckText, sideboardText);
+    if (parsedDeck.error) {
+      editError.textContent = parsedDeck.error;
+      editError.classList.remove('hidden');
+      return;
     }
 
-    // Parse the sideboard
-    const sideboardTextarea = document.getElementById('edit-sideboard-textarea');
-    const sideboardText = sideboardTextarea ? sideboardTextarea.value.trim() : '';
-    const sideboard = [];
-
-    if (sideboardText) {
-      for (const line of sideboardText.split('\n').filter(l => l.trim())) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine || trimmedLine.startsWith('//')) continue;
-
-        const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
-        if (!match) {
-          editError.textContent = `Invalid sideboard format on line: "${line}". Use format: "2x Island"`;
-          editError.classList.remove('hidden');
-          return;
-        }
-
-        const quantity = parseInt(match[1]);
-        const cardName = match[2].trim();
-        if (quantity < 1) continue;
-
-        sideboard.push({ quantity, originalName: cardName, name: cardName });
-      }
-    }
+    const decklist = parsedDeck.mainboard;
+    const sideboard = parsedDeck.sideboard;
 
     // Show loading
     editError.textContent = 'Validating deck...';
@@ -417,44 +462,19 @@ window.saveUpdatedDeck = async function() {
     if (!currentDeckId) return;
 
     const deckText = document.getElementById('edit-deck-textarea').value.trim();
-    const lines = deckText.split('\n').filter(l => l.trim());
-    const decklist = [];
+    const sideboardText = document.getElementById('edit-sideboard-textarea')?.value.trim() || '';
+    const editError = document.getElementById('edit-error');
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      // Skip section markers
-      if (trimmedLine.toUpperCase() === 'SIDEBOARD' || trimmedLine.startsWith('//')) {
-        continue;
-      }
-      
-      const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
-      if (!match) continue;
-
-      const quantity = parseInt(match[1]);
-      const cardName = match[2].trim();
-      if (quantity < 1) continue;
-
-      decklist.push({ quantity, originalName: cardName, name: cardName });
+    const parsedDeck = parseEditedDeckInput(deckText, sideboardText);
+    if (parsedDeck.error) {
+      editError.textContent = parsedDeck.error;
+      editError.style.color = 'var(--danger)';
+      editError.classList.remove('hidden');
+      return;
     }
 
-    // Parse sideboard
-    const sideboardTextarea = document.getElementById('edit-sideboard-textarea');
-    const sideboardText = sideboardTextarea ? sideboardTextarea.value.trim() : '';
-    const sideboard = [];
-
-    if (sideboardText) {
-      for (const line of sideboardText.split('\n').filter(l => l.trim())) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine || trimmedLine.startsWith('//')) continue;
-        const match = trimmedLine.match(/^(\d+)x?\s+(.+)$/i);
-        if (!match) continue;
-        const quantity = parseInt(match[1]);
-        const cardName = match[2].trim();
-        if (quantity < 1) continue;
-        sideboard.push({ quantity, originalName: cardName, name: cardName });
-      }
-    }
+    const decklist = parsedDeck.mainboard;
+    const sideboard = parsedDeck.sideboard;
 
     // Normalize and validate
     const normalizedDecklist = await normalizeDeckNames(decklist);
