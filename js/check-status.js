@@ -533,7 +533,6 @@ window.saveUpdatedDeck = async function() {
     currentDeckData.pauperIllegalCards = pauperValidation.illegalCards || [];
 
     // Show success
-    const editError = document.getElementById('edit-error');
     editError.textContent = '✓ Deck updated successfully!';
     editError.style.color = 'var(--success)';
     editError.classList.remove('hidden');
