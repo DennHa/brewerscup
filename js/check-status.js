@@ -11,6 +11,17 @@ import { normalizeDeckNames, validateAgainstBanlist, validatePauperLegality, get
 let currentDeckId = null;
 let currentDeckData = null;
 
+function getMainboardCards(deckData) {
+  if (Array.isArray(deckData.mainboard) && deckData.mainboard.length > 0) {
+    return deckData.mainboard;
+  }
+  return Array.isArray(deckData.decklist) ? deckData.decklist : [];
+}
+
+function getSideboardCards(deckData) {
+  return Array.isArray(deckData.sideboard) ? deckData.sideboard : [];
+}
+
 /**
  * Parse edited mainboard + sideboard text from the edit modal.
  *
@@ -27,7 +38,7 @@ function parseEditedDeckInput(mainboardText, sideboardText) {
       return { skip: true };
     }
 
-    const match = trimmedLine.match(/^(\d+)\s*[xX]?\s+(.+)$/);
+    const match = trimmedLine.match(/^(\d+)\s*[xX]?\s*(.+)$/);
     if (!match) {
       return {
         error: `Invalid format on ${lineLabel}: "${line}". Use format: "2x Island"`
@@ -165,6 +176,13 @@ window.checkDeck = async function() {
 function displayDeckResult(deckData) {
   const resultDiv = document.getElementById('check-result');
   const detailsDiv = document.getElementById('check-details');
+  const mainboardCards = getMainboardCards(deckData);
+  const sideboardCards = getSideboardCards(deckData);
+  const mainboardSize = mainboardCards.reduce((sum, c) => sum + (c.quantity || 0), 0);
+  const sideboardSize = sideboardCards.reduce((sum, c) => sum + (c.quantity || 0), 0);
+  const totalDeckSize = (typeof deckData.deckSize === 'number' && deckData.deckSize > 0)
+    ? deckData.deckSize
+    : mainboardSize + sideboardSize;
 
   // Format timestamp
   const timestamp = deckData.createdAt 
@@ -194,7 +212,7 @@ function displayDeckResult(deckData) {
     </div>
     <div class="detail-item">
       <span class="detail-label">Deck Size</span>
-      <span class="detail-value">${deckData.deckSize} cards</span>
+      <span class="detail-value">${totalDeckSize} cards</span>
     </div>
     <div class="detail-item">
       <span class="detail-label">Status</span>
@@ -233,8 +251,8 @@ function displayDeckResult(deckData) {
   // Display mainboard
   let deckListHtml = '<h4 style="margin-bottom: var(--spacing-md);">Mainboard</h4>';
   
-  if (deckData.decklist && deckData.decklist.length > 0) {
-    deckListHtml += deckData.decklist
+  if (mainboardCards.length > 0) {
+    deckListHtml += mainboardCards
       .sort((a, b) => b.quantity - a.quantity)
       .map(card => `
         <div class="deck-card-item">
@@ -246,9 +264,9 @@ function displayDeckResult(deckData) {
   }
   
   // Display sideboard if present
-  if (deckData.sideboard && deckData.sideboard.length > 0) {
+  if (sideboardCards.length > 0) {
     deckListHtml += '<h4 style="margin-top: var(--spacing-lg); margin-bottom: var(--spacing-md); padding-top: var(--spacing-lg); border-top: 1px solid var(--border);">Sideboard</h4>';
-    deckListHtml += deckData.sideboard
+    deckListHtml += sideboardCards
       .sort((a, b) => b.quantity - a.quantity)
       .map(card => `
         <div class="deck-card-item sideboard-card-item">
@@ -271,9 +289,11 @@ window.toggleEditMode = function() {
   console.log('🔄 Opening edit modal');
   const modal = document.getElementById('edit-deck-modal');
   const textarea = document.getElementById('edit-deck-textarea');
+  const mainboardCards = getMainboardCards(currentDeckData);
+  const sideboardCards = getSideboardCards(currentDeckData);
   
   // Populate mainboard textarea with current decklist
-  const deckText = currentDeckData.decklist
+  const deckText = mainboardCards
     .map(card => `${card.quantity}x ${card.name || card.originalName}`)
     .join('\n');
   textarea.value = deckText;
@@ -281,7 +301,7 @@ window.toggleEditMode = function() {
   // Populate sideboard textarea with current sideboard
   const sideboardTextarea = document.getElementById('edit-sideboard-textarea');
   if (sideboardTextarea) {
-    const sideboardText = (currentDeckData.sideboard || [])
+    const sideboardText = sideboardCards
       .map(card => `${card.quantity}x ${card.name || card.originalName}`)
       .join('\n');
     sideboardTextarea.value = sideboardText;
@@ -481,13 +501,18 @@ window.saveUpdatedDeck = async function() {
     const normalizedSideboard = sideboard.length > 0 ? await normalizeDeckNames(sideboard) : [];
     const validation = validateAgainstBanlist(normalizedDecklist);
     const pauperValidation = await validatePauperLegality(normalizedDecklist);
-    const deckSize = decklist.reduce((sum, card) => sum + card.quantity, 0);
+    const mainboardSize = decklist.reduce((sum, card) => sum + card.quantity, 0);
+    const sideboardSize = sideboard.reduce((sum, card) => sum + card.quantity, 0);
+    const deckSize = mainboardSize + sideboardSize;
 
     // Update Firestore
     const deckRef = doc(db, 'decks', currentDeckId);
     await updateDoc(deckRef, {
       decklist: normalizedDecklist,
+      mainboard: normalizedDecklist,
       sideboard: normalizedSideboard,
+      mainboardSize,
+      sideboardSize,
       deckSize,
       isValid: validation.valid && pauperValidation.valid,
       bannedCards: validation.bannedCards || [],
@@ -498,7 +523,10 @@ window.saveUpdatedDeck = async function() {
 
     // Update current data
     currentDeckData.decklist = normalizedDecklist;
+    currentDeckData.mainboard = normalizedDecklist;
     currentDeckData.sideboard = normalizedSideboard;
+    currentDeckData.mainboardSize = mainboardSize;
+    currentDeckData.sideboardSize = sideboardSize;
     currentDeckData.deckSize = deckSize;
     currentDeckData.isValid = validation.valid && pauperValidation.valid;
     currentDeckData.bannedCards = validation.bannedCards || [];
